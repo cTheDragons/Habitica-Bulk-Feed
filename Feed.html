@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Bulk Feed Alpha</title>
+    <base target="_blank">
+<!--
+	This is a test for docs
+--->
+
+	<meta name="description" content="Bulk Feed Alpha" />
+	<meta name="author" content="cTheDragons" />
+
+	<script src="js/jquery-1.12.3.js"></script>
+
+	<!--- https://datatables.net/download/ -->
+	<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jszip-2.5.0/pdfmake-0.1.18/dt-1.10.12/b-1.2.2/b-colvis-1.2.2/b-flash-1.2.2/b-html5-1.2.2/b-print-1.2.2/cr-1.3.2/se-1.2.0/datatables.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jszip-2.5.0/pdfmake-0.1.18/dt-1.10.12/b-1.2.2/b-colvis-1.2.2/b-flash-1.2.2/b-html5-1.2.2/b-print-1.2.2/cr-1.3.2/se-1.2.0/datatables.min.css"/>
+
+<script type="text/javascript">
+$(function() { // wraps around all our code to not pollute global namespace
+
+//////////////////////////////////////////////////////////////////////
+////   Global Variables                              /////////////////
+//////////////////////////////////////////////////////////////////////
+
+var content;  // holds site-wide content (gear names and stats, quests, etc)
+var user;     // holds user's data
+var group;	  // holds all groups
+var party; 	  // holds party data
+var memberListToFetch = []; //holds memberList that is fetchng (30 limit)
+var members = [];  // hold members of groups
+var lastListMemberId = '';  // hold last member id to be used with groups
+
+
+var exportOptions = [
+					{id: 0, shortDesc: 'Baby Bear', longDesc: 'Displays & exports UserId, User, Posted, Sent, Text', orderTableBy: 2, dataTableFormat: ['id', 'leader', 'balance', 'name', 'memberCount']},
+					{id: 1, shortDesc: 'Mama Bear', longDesc: 'Displays & exports UserId, User, Tier, Contributor, Posted, Sent, Text', orderTableBy: 4},
+					{id: 2, shortDesc: 'Papa Bear', longDesc: 'Displays & exports UserId, User, Tier, Contributor, Contributor Contributions, Admin, Posted, Epoch, Sent, Text', orderTableBy: 7}
+				]
+
+
+
+var exportOption = 0
+
+//////////////////////////////////////////////////////////////////////
+////   Global Connection Variables      //////////////////////////////
+//////////////////////////////////////////////////////////////////////
+var serverName               = 'Habitica'; // used in "loading" message
+var serverUrl                = 'https://habitica.com/api/v3';
+var serverPathContent        = '/content?language=en';
+var serverPathTavern         = '/groups/habitrpg';
+var serverPathParty          = '/groups/party';
+var serverPathUser           = '/user';
+var serverPathTasks          = '/tasks/user';
+var serverPathFeedPet			 = '/user/feed'
+var serverPathUserGroups	 = '/groups';
+var serverPathCompletedTodos = '/tasks/user?type=_allCompletedTodos';
+var userId                   = 'BLAH'; //HARD CODED ###################
+var apiToken                 = 'BLAH'; //HARD CODED ###################
+var debug                    = true;
+var debugShowObject                    = true;
+var dataToDisplaySet 			 = [];
+var dataToDisplaySetNoSystem	 = [];
+
+postFeedPet();
+
+
+
+function fetchData() {
+    if (debug) console.log('debug 2');
+
+    var ajaxRunningCount = 2; // drops to 0 when all calls have succeeded
+
+    // fetch the user's own content (gear owned, etc):
+    $.ajax({
+        url: serverUrl + serverPathUser,
+        type: 'GET',
+        dataType: 'json',
+        cache: false,
+        beforeSend: function(xhr){
+                xhr.setRequestHeader('x-api-user', userId);
+                xhr.setRequestHeader('x-api-key',  apiToken);
+            },
+        success: fetchUserSuccess,
+        error: fetchFailure
+    });
+
+
+    // fetch content
+    $.ajax({
+        url: serverUrl + serverPathContent,
+        type: 'GET',
+		data: {type: 'guilds'},
+        dataType: 'json',
+        cache: false,
+        beforeSend: function(xhr){
+                xhr.setRequestHeader('x-api-user', userId);
+                xhr.setRequestHeader('x-api-key',  apiToken);
+            },
+        success: fetchContentSuccess,
+        error: function() { // assume no party
+            party = {}; // no party
+            ajaxRunningCount--;
+            if (ajaxRunningCount === 0) { // all ajax calls have finished
+                parseData();
+            }
+        },
+    });
+
+	function fetchFailure() {
+        if (debug) console.log('debug fetchFailure start');
+        if (debug) console.log('debug fetchFailure end');
+    }
+    function fetchUserSuccess(data) {
+        if (debug) console.log('debug parseData User success start');
+		if (debug) console.log(data);
+        user = data.data;
+        ajaxRunningCount--;
+        if (ajaxRunningCount === 0) { // all ajax calls have finished
+            parseData();
+        }
+    }
+	
+    function fetchContentSuccess(data) {
+		if (debug) console.log('debug parseData Group success start');
+		if (debug) console.log(data);
+        content = data.data;
+        ajaxRunningCount--;
+        if (ajaxRunningCount === 0) { // all ajax calls have finished
+            parseData();
+        }
+    }
+}
+
+function postFeedPet() {
+	if (debug) console.log('debug postFeedPet start');
+	// Wolf
+	// TigerCub
+	// LionCub
+	// BearCub
+	// Dragon
+	// PandaCub
+	// Fox
+	// FlyingPig
+	// Cactus
+	
+	var pet = 'Snail-Shade'	
+	var food = 'Chocolate'
+	var repeat = 9
+	var index = 0
+	
+	
+
+	if (confirm('Feed ' + food + ' to ' + pet + ' ' + repeat + ' times?')){
+		postNextFeedPet()
+	} else {
+		alert('Action cancelled')
+		parseData;
+	}
+	
+	
+	//This is done like this as receive ERR_INCOMPLETE_CHUNKED_ENCODING
+	function postNextFeedPet(){
+		$('#posting .good').show();
+		
+		urlToPost = serverUrl + serverPathFeedPet + '/' + pet + '/' + food
+		//$('#posting #statusPost').text('Messaging ' + obj[nameIndex] );
+		if (debugShowObject) console.log(urlToPost);
+		//if (debugShowObject) console.log(newData);
+		$.ajax({
+			url: urlToPost,
+			type: 'POST',
+			contentType: 'application/json',
+			//data: JSON.stringify(newData),
+			dataType: 'json',
+			cache: false,
+			beforeSend: function(xhr){
+					xhr.setRequestHeader('x-api-user', userId);
+					xhr.setRequestHeader('x-api-key',  apiToken);
+				},
+			success: postFeedPetSuccess,
+			error: postFeedPetFailure
+		});		
+	}
+		
+
+	
+	function postFeedPetFailure(data){
+		if (debug) console.log('debug postFeedPetFailure start');
+		if (debugShowObject) console.log(data);
+		alert('Can not feed pet');	
+		index = repeat
+		
+		postFeedPetCheckCompleted()
+	}
+
+
+	function postFeedPetSuccess(data){
+		if (debug) console.log('debug postFeedPetSucess start');
+//		$('#posting #statusPost').text('Succesfully Messaged ' + obj[nameIndex] );
+		if (debugShowObject) console.log(data);
+//		privateMessageList += '\n\u2022  ' + obj[nameIndex]  
+		index++
+		
+		postFeedPetCheckCompleted()
+	}
+	
+	function postFeedPetCheckCompleted(){
+		if (index === repeat){
+			$('#posting .good').hide();
+//			if (debugShowObject) console.log(privateMessageList);
+//			alert('Done!\n\nFed ' + food + 'to ' + pet + ' ' + repeat + ' times')
+			fetchData() 
+		} else {
+			postNextFeedPet()
+		}		
+	
+	}
+}
+
+function parseData() {
+        var dataToDisplay = [];
+		var dataHeader =[];
+		var arrayToAdd = [];
+		dataToDisplaySet = []
+		dataToDisplaySetNoSystem = []
+		
+		userDataInHeader();
+		
+        $.each(user.items.pets, function(index, obj){
+			arrayToAdd = []; //clear array
+			//console.log(index)
+			//modifyChatProperties(obj);
+            //dataToDisplay.push(obj); 
+			//$.each(exportOptions[exportOption].dataTableFormat, function(index2, obj2){
+				arrayToAdd.push(index)
+				arrayToAdd.push(index)
+				arrayToAdd.push(obj)
+			//});
+			//dataToDisplaySet.push([obj.userPretty, obj.uuid, obj.timestamp, obj.text])
+			dataToDisplaySet.push( arrayToAdd)
+		});
+		if (debug) console.log(dataToDisplaySet);
+//		if (debug) console.log(dataToDisplaySetNoSystem);
+		
+		dataHeader = [{title: 'Pet Id'}, {title: 'Name'}, {title: 'Balance'}];
+
+
+		
+		if ($("#dataToDisplayTable")[0].rows.length != 0){
+			var table = $("#dataToDisplayTable").DataTable();
+			console.log ('Table exists')
+			table.clear();
+			table.draw();
+				
+			table.rows.add(dataToDisplaySet);
+			table.draw()
+		} else {
+			console.log ('Table does not exists')
+			
+			var events = $('#events');
+			$(document).ready(function() {
+				var table = $('#dataToDisplayTable').DataTable( {
+					data: dataToDisplaySet,
+					columns: dataHeader,
+					columnDefs: [
+						{ targets: [0, 1, 2], visible: true},
+						{ targets: '_all', visible: false }
+					],
+					order: [2, 'desc'],
+					lengthMenu: [ [100, 200, 500, -1], [100, 200, 500, "all"] ],
+					select: true,
+					colReorder: true,				
+					dom: 'Bfrtip',
+					buttons: [
+						 'pageLength', 
+						 {
+							extend: 'collection',
+							text: 'Show/Hide',
+							buttons: ['columnsToggle']
+						},
+						{
+							extend: 'collection',
+							text: 'Print/Copy/Export',
+							buttons: [ 
+								'print', 'copy', {
+									extend: 'pdf',
+									filename: 'Test'
+								}, {
+									extend: 'excel',
+									filename: 'Test'
+								}, {
+									extend: 'csv',
+									filename: 'Test'
+								}						
+							],
+							autoClose: true
+						},
+						{
+							text: 'Id Of Selected',
+							action: function () {
+								var rowData = table.rows( { selected: true } ).data().toArray();
+	 
+								console.log( rowData );
+							}
+						}					
+					],
+					
+					
+				} );
+			} );
+		
+		}
+		
+}
+
+
+function modifyChatProperties(obj) {
+	//obj.textPretty  = renderFormattedText(obj.text, {'setParaClass':'chatText'});
+	//obj.userPretty  = renderFormattedText(obj.user, {'setParaClass':'userName'});
+	//obj.creation  = reformatDate(obj.timestamp);
+	if (obj.uuid == 'system') {
+		obj.userPretty = 'System'
+	} else {
+		obj.userPretty = obj.user
+	}
+		
+		
+//	function reformatDate(dateString) {
+//		var formattedDate = myDateConverter(dateString, 'long');
+//		var shortDate     = myDateConverter(dateString, 'short');
+//		return { 'dateAndTime': formattedDate,
+//				 'shortDate': shortDate };
+//	}
+		
+} 
+
+	function userDataInHeader() {
+		var displayName = user.profile.nameNotPretty //renderFormattedText(user.profile.name);
+		
+		$('#headerExtras').html('<div id="userNameDisplay">' +
+				displayName +
+				'</div>' +
+				'<div id="explanationAndClearLinks">' +
+				'<input id="refetch" type="submit" value="' +
+				'Feed Again " />' +
+//				'<span id="documentationAndFormToggle" class="showHideToggle" data-target="documentationAndForm" data-linktext="documentation" data-closemainsections="true">show documentation / options</span>' +
+				'</div>'  				
+				
+		);
+		$('#refetch').click(function(event){
+			/* The user clicked on the Re-Fetch My Data button. */
+			postFeedPet();
+			
+			var table = $("#dataToDisplayTable").DataTable();
+			
+			$(document).ready(function() {
+				$("#table2").DataTable();
+			});
+			
+			
+		});
+	}
+
+
+    if (debug) console.log('debug 99');
+});
+
+
+
+
+
+</script>
+ 
+</head>
+<body>
+	<div id="headerExtras"></div>
+	<p>THIS IS A ALPHA VERISON. NOT TO USED BY PUBLIC</p>
+	<table id="dataToDisplayTable" class="display" width="100%"></table>
+	<table id="table2" class="display" width="100%"></table>
+</body>
+</html>
