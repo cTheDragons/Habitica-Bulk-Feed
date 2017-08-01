@@ -100,7 +100,7 @@ var dashboardToDisplay = [
 
 var sectionsToDisplay = [	
 	{type: 'heading', id: 'headingGroup01', title: 'Action', showOnly: [], description: ''},
-		{type: 'sectionTable', id: 'pets', title: 'Pets', showOnly: [], description: 'Shows the status of your pets.'},
+		{type: 'sectionTable', id: 'pets', title: 'Pets', showOnly: [], description: 'Shows the status of your pets. This section will allow you to bulk hatch, bulk feed your pets a specific food or bulk feed with ideal food. The table allows for multiple select so you can do this for more than one pet at once.'},
 		{type: 'sectionTable', id: 'triadBingoRequirement', title: 'Triad Bingo', showOnly: [], description: 'Either allows you to hatch all items for Triad Bingo or show which items are missing.'},
 		{type: 'sectionTable', id: 'actionLog', title: 'Activity Log', showOnly: [], description: 'Lists all actions and reponses from Bulk Feeding the pets through the tools.'},
 	{type: 'heading', id: 'headingGroup2', title: 'Analyze', showOnly: [], description: ''},
@@ -218,7 +218,7 @@ sectionTables['actionLog'] = {
 	papaBear: {show: ['all'], orderBy: [[1, 'desc'],[3, 'asc']]},
 	extraColumnDefs: [{'className': 'dt-center', 'targets': [0,3]},{'className': 'dt-right', 'targets': [1]}],
 	subTitle: function (){
-		var html = 'Log will clear once html page is refreshed or opptions are altered.'
+		var html = 'Log will clear once html page is refreshed or "Fetch Pet Data" Button in show documentation/options again area.'
 		return html 		
 	}
 }
@@ -1262,7 +1262,7 @@ function parseData() {
 				'<div id="explanationAndClearLinks">' +
 				'<input id="refetch" type="submit" value="' +
 				'Re-Fetch Data (last fetched ' + fetchtime + ')" />' +
-				'<span id="documentationAndFormToggle" class="showHideToggle" data-target="documentationAndForm" data-linktext="documentation" data-closemainsections="true">show documentation / options</span>' +
+				'<span id="documentationAndFormToggle" class="showHideToggle" data-target="documentationAndForm" data-linktext="documentation / options" data-closemainsections="true">show documentation / options</span>' +
 				'</div>'  				
 				
 		);
@@ -2521,7 +2521,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1>BETA <a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v0.1)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.0)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 <div id="headerGroupExtras"></div>
@@ -2554,7 +2554,26 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
-        <dt>0.1 - Beta Release <span class="date">2016-11-02</span></dt>
+		<dt>1.0 - Public Release<span class="date">2017-08-##</span></dt>
+        <dd><ul>
+            <li>Features:
+                <ul>
+					<li>###</li>
+				</ul> 
+            </li>
+	        <li>Documentation:
+                <ul>
+					<li>Added more description to each of the sections</li>
+                </ul>
+            </li>		
+	        <li>Bug Fixes:
+                <ul>
+					<li>documentation / options always shows next to the re-fetch button</li>
+					<li>Typo options</li>
+               </ul>
+            </li>
+		</ul></dd>	
+        <dt>0.1 - Beta Release <span class="date">2017-08-01</span></dt>
         <dd><ul>
             <li>Features:
                 <ul>
