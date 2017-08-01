@@ -2,21 +2,46 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Bulk Feed Alpha</title>
+    <title>Bulk Feed Pets Tool</title>
     <base target="_blank">
+
 <!--
-	This is a test for docs
---->
 
-	<meta name="description" content="Bulk Feed Alpha" />
-	<meta name="author" content="cTheDragons" />
+This code is licensed under the same terms as Habitica:
+    https://raw.githubusercontent.com/HabitRPG/habitrpg/develop/LICENSE
 
-	<script src="js/jquery-1.12.3.js"></script>
+https://github.com/Alys/tools-for-habitrpg/blob/master/habitrpg_user_data_display.html
 
-	<!--- https://datatables.net/download/ -->
-	<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jszip-2.5.0/pdfmake-0.1.18/dt-1.10.12/b-1.2.2/b-colvis-1.2.2/b-flash-1.2.2/b-html5-1.2.2/b-print-1.2.2/cr-1.3.2/se-1.2.0/datatables.min.js"></script>
-	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jszip-2.5.0/pdfmake-0.1.18/dt-1.10.12/b-1.2.2/b-colvis-1.2.2/b-flash-1.2.2/b-html5-1.2.2/b-print-1.2.2/cr-1.3.2/se-1.2.0/datatables.min.css"/>
+https://oldgods.net/habitica/cTheDragons/feed.html
 
+Contributors:
+    cTheDragons https://github.com/cTheDragons
+	based on code from
+	Alys (Alice Harris), lady_alys@oldgods.net https://github.com/Alys
+    thepeopleseason (James Hsiao) https://github.com/thepeopleseason
+    goldfndr (Richard Finegold) https://github.com/goldfndr
+    Blade Barringer https://github.com/crookedneighbor
+    donoftime https://github.com/donoftime
+    me_and (Adam Dinwoodie) https://github.com/me-and
+	
+
+-->
+
+
+    <meta name="description" content="Bulk Feed Pets Tool" />
+    <meta name="author" content="cTheDragons" />
+
+	
+	
+
+	<script src="https://code.jquery.com/jquery-1.12.3.js"></script> <!--- jquery -->
+	<script src="https://momentjs.com/downloads/moment-with-locales.min.js"></script> <!--- time functions -->
+	<script src="js/habitica-markdown.min.js"></script> <!--- Markdown -->
+
+	 <!--- https://datatables.net/download/ -->
+	<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jszip-2.5.0/pdfmake-0.1.18/dt-1.10.12/b-1.2.2/b-colvis-1.2.2/b-flash-1.2.2/b-html5-1.2.2/b-print-1.2.2/se-1.2.0/datatables.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jszip-2.5.0/pdfmake-0.1.18/dt-1.10.12/b-1.2.2/b-colvis-1.2.2/b-flash-1.2.2/b-html5-1.2.2/b-print-1.2.2/se-1.2.0/datatables.min.css"/>
+ 	
 <script type="text/javascript">
 $(function() { // wraps around all our code to not pollute global namespace
 
@@ -26,53 +51,453 @@ $(function() { // wraps around all our code to not pollute global namespace
 
 var content;  // holds site-wide content (gear names and stats, quests, etc)
 var user;     // holds user's data
-var group;	  // holds all groups
-var party; 	  // holds party data
-var memberListToFetch = []; //holds memberList that is fetchng (30 limit)
-var members = [];  // hold members of groups
-var lastListMemberId = '';  // hold last member id to be used with groups
+var pets;	  // holds all pets
+var eggs;	  // holds all eggs
+var potions;	  // holds all potions
+var food;	  // holds all food
+var actionLog; 		//log that holds all the data from feeding/hatching pets
+var triadBingoRequirement; //holds the requirements for Triad Bingo
+var canTriadBingo;
+var userIsAdmin; 
+var multiStep;
+var multiStepArray = []; //For completing multiple different actions
+
+//////////////////////////////////////////////////////////////////////
+////   Global Constants                              /////////////////
+//////////////////////////////////////////////////////////////////////
+var DOUBLEQUOTES = 		'"' //This is to make my life easier... 
+var SECTIONREFRESH = 	"SectionRefresh"
 
 
+
+//////////////////////////////////////////////////////////////////////
+////   Sections                              /////////////////
+//////////////////////////////////////////////////////////////////////
+
+		// TO ADD NEW SECTION: To create a Table of Content entry and Main,
+		// add the unique identifier for the new section to array section to Display. 
+		// If it is a section that displays table content update sectionTables too. 
+		// If new content is required see formatAllDataAndCollate() 
+		
+		//If custom sections required add to below the Sections data... (Not there yet)
+
+
+//index array for looping
+var dashboardToDisplay = [
+/*	{id: 'petToFeedCount', label: 'Total Pets To Feed', hoverText: 'Total number of pets hatched before hatching a mount.', value: 'user.feedStats.petFeedCount', status: 'neutral', showOnly: []},
+	{id: 'mountCount', label: 'Total Mounts', hoverText: 'Total number of mounts.', value: 'user.mountCount', value: 'user.feedStats.mountCount', status: 'neutral', showOnly: []},
+	{id: 'petNoFeedCount', label: 'Total Pets ReGen', hoverText: 'Total number of pets hatched after already hatching a mount.', value: 'user.feedStats.petNoFeedCount', status: 'neutral', showOnly: []},
+	{id: 'petRareCount', label: 'Rare Pets Count', hoverText: 'Total number of rare Feed', value: 'user.feedStats.petRareCount', status: 'danger', showOnly: []},
+	{id: 'mountRareCount', label: 'Rare Mount Count', hoverText: 'Total number of rare Mounts', value: 'user.feedStats.mountRareCount', status: 'danger', showOnly: []},
+	{id: 'petToFeedBaseCount', label: 'Base Pets To Feed', hoverText: 'Total number of base pets hatched before hatching a mount.', value: 'user.feedStats.petFeedBaseCount', status: 'safe', showOnly: []},
+	{id: 'mountBaseCount', label: 'Base Mounts', hoverText: 'Total number of base mounts.', status: 'safe',  value: 'user.feedStats.mountBaseCount', showOnly: []},
+	{id: 'petNoFeedBaseCount', label: 'Base Pets ReGen', hoverText: 'Total number of base pets hatched after already hatching a mount.', value: 'user.feedStats.petNoFeedBaseCount', status: 'safe', showOnly: []},
+	{id: 'eggBaseCount', label: 'Base Eggs', hoverText: 'Total Base Eggs (ignoring excess quantity)', value: 'user.feedStats.eggBaseCount', status: 'safe', showOnly: []},
+	{id: 'potionBaseCount', label: 'Base Potions', hoverText: 'Total Base Potions (ignoring excess quantity)', value: 'user.feedStats.potionBaseCount', status: 'safe', showOnly: []},
+*/
+]
+
+
+var sectionsToDisplay = [	
+	{type: 'heading', id: 'headingGroup01', title: 'Action', showOnly: [], description: ''},
+		{type: 'sectionTable', id: 'pets', title: 'Pets', showOnly: [], description: 'Shows the status of your pets.'},
+		{type: 'sectionTable', id: 'triadBingoRequirement', title: 'Triad Bingo', showOnly: [], description: 'Either allows you to hatch all items for Triad Bingo or show which items are missing.'},
+		{type: 'sectionTable', id: 'actionLog', title: 'Activity Log', showOnly: [], description: 'Lists all actions and reponses from Bulk Feeding the pets through the tools.'},
+	{type: 'heading', id: 'headingGroup2', title: 'Analyze', showOnly: [], description: ''},
+		{type: 'sectionTable', id: 'eggs', title: 'By Egg Type', showOnly: [], description: 'Lists all eggs and counts of pet & mounts.'},
+		{type: 'sectionTable', id: 'potions', title: 'By Potion Type', showOnly: [], description: 'Lists all potions and counts of pet & mounts.'}
+	
+]
+
+//named for searching
+//Not sure this is bad as mixing constants with definitions... but hey :)
+var sectionTables =	{}
+sectionTables['pets'] = {
+	type: 'pets',
+	dataSet: [], 
+	dataSetHeader: ['Key', 'Name',  'Type', 'Potion Name', 'Egg Name', 'Can Hatch?', 'Has Pet?', 'Has Mount?',  'Feed Bar', 'Ideal Food Avail'], 
+	dataTable: ['key', 'text', 'type', 'potionPretty', 'eggPretty', 'canHatch', 'pet',  'mount', 'feedValue', 'foodAvail'],
+	babyBear: {show: [1,6,7,8,9], orderBy: [[1, 'asc']]},
+	mamaBear: {show: [1,2,5,6,7,8,9], orderBy: [[1, 'asc']]},
+	papaBear: {show: [1,2,3,4,5,6,7,8,9], orderBy: [[1, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-center', 'targets': [5,6,7,8]},{'className': 'dt-right', 'targets': [8,9]}],
+	subTitle: function (){
+		var html = selectionHeadingMultiSelect()
+		return html 		
+	},
+	petKeyIndex: 0,
+	petNameIndex: 1,
+	extraButton: function(){
+		var returnButton = []
+		var manualFeedPetButton = []
+		var singleButton = []
+		$.each(food, function(index, obj){
+			if (obj.total > 0 ) {
+				singleButton = {
+					text: obj.text, // + ' (' + obj.total + ')', //Can't update totals on refresh so hiding.
+					action: function ( e, dt, node, config ) {
+						var rowData = sectionTables['pets'].table.rows( { selected: true } ).data().toArray();
+						var petKeyIndex = sectionTables['pets'].petKeyIndex;
+						var petNameIndex = sectionTables['pets'].petNameIndex;
+						manualFeedPet(rowData, petKeyIndex, petNameIndex, index)	
+					}
+				}	
+				manualFeedPetButton.push(singleButton)
+			}
+			
+		});
+		
+		returnButton = []
+		returnButton.push({
+			text: 'Bulk Hatch',
+			action: function ( e, dt, node, config ) {
+					var rowData = sectionTables['pets'].table.rows( { selected: true } ).data().toArray();
+					var petKeyIndex = sectionTables['pets'].petKeyIndex;
+					var petNameIndex = sectionTables['pets'].petNameIndex;
+					postHatchPet(rowData, petKeyIndex, petNameIndex, false, -1)	
+				},
+			className: 'hatchPetButton'		
+		})
+		
+		if (manualFeedPetButton.length > 0) {
+			returnButton.push({
+				extend: 'collection',
+				text: 'Manual Feed',
+				buttons: manualFeedPetButton,
+				autoClose: true,
+				className: 'manualFeedPetButton'		
+			})
+		}			
+					
+					
+		returnButton.push({
+			text: 'Bulk Feed',
+			action: function ( e, dt, node, config ) {
+					var rowData = sectionTables['pets'].table.rows( { selected: true } ).data().toArray();
+					var petKeyIndex = sectionTables['pets'].petKeyIndex;
+					var petNameIndex = sectionTables['pets'].petNameIndex;
+					postFeedPet(rowData, petKeyIndex, petNameIndex, false, -1, -1)	
+				},
+			className: 'feedPetButton'		
+		})
+			
+		return returnButton
+	}
+}
+sectionTables['triadBingoRequirement'] = {
+	type: 'triadBingoRequirement',
+	dataSet: [], 
+	dataSetHeader: ['Type', 'Name', 'Require', 'Have', 'Missing'], 
+	dataTable: ['type', 'text', 'need', 'have', 'missing'],
+	babyBear: {show: [0,3], orderBy: [[1, 'decsc']]},
+	mamaBear: {show: [0,2,3], orderBy: [[1, 'desc']]},
+	papaBear: {show: ['all'], orderBy: [[1, 'desc']]},
+	extraColumnDefs: [{'className': 'dt-right', 'targets': [2,3,4]}],
+	subTitle: function (){
+		var html = ''
+		if (canTriadBingo) {
+			html += '<p>You have all items required! Hatch and feed all for Triad Bingo?</p>'
+			html += '<p><input class="div-triadBingo" id="triadBingo" type="submit" value="Yes! Hatch and Feed all for Triad Bingo" /></p>'
+		} else if (sectionTables['triadBingoRequirement'].dataSet.length > 0) {
+			html += '<p>Listed below are the items missing to complete Triad Bingo.</p>'
+		} else {
+			html += '<p>You have Triad Bingo!</p>'
+		}
+
+		return html 		
+	}
+}
+
+sectionTables['actionLog'] = {
+	type: 'actionLog',
+	dataSet: [], 
+	dataSetHeader: ['Date', 'Epoch', 'ActionId',  'Response?', 'Message'], 
+	dataTable: ['creation.shortDate', 'epoch', 'actionLogId', 'response', 'message'],
+	babyBear: {show: [0,3], orderBy: [[1, 'decsc'],[3, 'asc']]},
+	mamaBear: {show: [0,2,3], orderBy: [[1, 'desc'],[3, 'asc']]},
+	papaBear: {show: ['all'], orderBy: [[1, 'desc'],[3, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-center', 'targets': [0,3]},{'className': 'dt-right', 'targets': [1]}],
+	subTitle: function (){
+		var html = 'Log will clear once html page is refreshed or opptions are altered.'
+		return html 		
+	}
+}
+
+sectionTables['eggs'] = {
+	type: 'eggs',
+	dataSet: [], 
+	dataSetHeader: ['Key', 'Name', 'Type', 'Egg Count', 'Not Hatched',  'Pets To Feed', 'Mounts', 'ReGen Pets'], 
+	dataTable: ['key', 'text', 'feedStats.type', 'total', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount'],
+	babyBear: {show: [0,3], orderBy: [[1, 'asc']]},
+	mamaBear: {show: [0,2,3], orderBy: [[1, 'asc']]},
+	papaBear: {show: [1,2,3,4,5,6,7], orderBy: [[1, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-right', 'targets': [3,4,5,6,7]}],
+	subTitle: function (){
+		var html = ''
+		html += 'Magic Potion Pets are not included in the counts. Please see <span class="showHideToggle" data-target="potionsSection" data-closemainsections="true">Analyze By Potion Section</span> for counts of these pets.'
+		return html 		
+	}
+}
+
+
+sectionTables['potions'] = {
+	type: 'potions',
+	dataSet: [], 
+	dataSetHeader: ['Key', 'Name', 'Magic Potion?', 'Potion Count', 'Food Available', 'Not Hatched', 'Pets To Feed', 'Mounts', 'ReGen Pets'], 
+	dataTable: ['key', 'text', 'premium', 'total', 'foodAvail', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount'],
+	babyBear: {show: [0,3], orderBy: [[1, 'asc']]},
+	mamaBear: {show: [0,2,3], orderBy: [[1, 'asc']]},
+	papaBear: {show: [1,2,3,4,5,6,7,8], orderBy: [[1, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-center', 'targets': [2]}, {'className': 'dt-right', 'targets': [3,4,5,6,7,8]}],
+	subTitle: function (){
+		var html = ''
+		return html 		
+	}
+}
+
+function selectionHeadingMultiSelect() {
+	var html = ''
+	html += '<p>To select records in bulk select the first and then hold down the shift key to select the last record. To select multiples hold down the ctrl key while selecting.</p>'
+	return html
+}
+
+//export options	
 var exportOptions = [
-					{id: 0, shortDesc: 'Baby Bear', longDesc: 'Displays & exports UserId, User, Posted, Sent, Text', orderTableBy: 2, dataTableFormat: ['id', 'leader', 'balance', 'name', 'memberCount']},
-					{id: 1, shortDesc: 'Mama Bear', longDesc: 'Displays & exports UserId, User, Tier, Contributor, Posted, Sent, Text', orderTableBy: 4},
-					{id: 2, shortDesc: 'Papa Bear', longDesc: 'Displays & exports UserId, User, Tier, Contributor, Contributor Contributions, Admin, Posted, Epoch, Sent, Text', orderTableBy: 7}
-				]
+	{id: 'babyBear', shortDesc: 'Baby Bear', longDesc: 'Displays & exports short table format'},
+	{id: 'mamaBear', shortDesc: 'Mama Bear', longDesc: 'Displays & exports medium table format'},
+	{id: 'papaBear', shortDesc: 'Papa Bear', longDesc: 'Displays & exports max table format'}
+];
+var exportFormats = [
+	{id: 0, shortDesc: 'Warm Porridge', longDesc: 'Displays & exports with Emoji & Text converted but HTML removed', convertMarkup: true, removeHtml: true, convertLineBreaks: false},
+	{id: 1, shortDesc: 'Hot Porridge', longDesc: 'Displays & exports in exact Habitica HTML format', convertMarkup: true, removeHtml: false, convertLineBreaks: false},
+	{id: 2, shortDesc: 'Cold Porridge', longDesc: 'Displays & exports in raw format', convertMarkup: false, removeHtml: false, convertLineBreaks: true}
+];
 
 
-
-var exportOption = 0
-
+				 
+					
 //////////////////////////////////////////////////////////////////////
 ////   Global Connection Variables      //////////////////////////////
 //////////////////////////////////////////////////////////////////////
-var serverName               = 'Habitica'; // used in "loading" message
-var serverUrl                = 'https://habitica.com/api/v3';
-var serverPathContent        = '/content?language=en';
-var serverPathTavern         = '/groups/habitrpg';
-var serverPathParty          = '/groups/party';
-var serverPathUser           = '/user';
-var serverPathTasks          = '/tasks/user';
-var serverPathFeedPet			 = '/user/feed'
-var serverPathUserGroups	 = '/groups';
-var serverPathCompletedTodos = '/tasks/user?type=_allCompletedTodos';
-var userId                   = 'BLAH'; //HARD CODED ###################
-var apiToken                 = 'BLAH'; //HARD CODED ###################
-var debug                    = true;
-var debugShowObject                    = true;
-var dataToDisplaySet 			 = [];
-var dataToDisplaySetNoSystem	 = [];
+var warningMessage				= 	'PLEASE ENSURE YOUR MESSAGE IS:\n' +
+									'\n\u2022 is respectful, supportive and courteous;' + 
+									'\n\u2022 is not spam, including unwanted advertisements of products, social media accounts, etc;' +
+									'\n\u2022 is not begging for a gift of gems or a subscription' +
+									'\n\u2022 meets all requirements of the Community Guidelines of Habitica (https://habitica.com/static/community-guidelines). ' +
+									'\n\u2022 meets all requirements of the Term of Service of Habitica (https://habitica.com/static/terms). ' +
+									'\n' +
+									'\nFailure to do so can lead to minor consequences (like warnings) to severe consequences including account bans & deletions.' +
+									'\n' +
+									'\nIf you have any concerns, please email Lemoness (leslie@habitica.com) for clarification.'
 
-postFeedPet();
+var serverName					= 'Habitica'; // used in "loading" message
+var serverUrl					= 'https://habitica.com/api/v3';
+var serverPathContent			= '/content?language=en';
+var serverPathUser				= '/user';
+var serverPathFeedPet			= '/user/feed'
+var serverPathHatchPet			= '/user/hatch/'
+var imageURL					= 'https://habitica-assets.s3.amazonaws.com/mobileApp/images/' 
+var imageShopPrefix             =  'shop_'
+var imageFileSuffix				= '.png'
+
+var userId						= '';
+var apiToken					= '';
+var exportOption 			 	= 'papaBear';
+var exportFormat			 	= 1;
+var debug						= false;
+var debugShowObject				= false;
+
+if (debug || debugShowObject) serverName = '*** TURN DEBUG OFF! *** - ' + serverName
+if (debug) console.log('debug 1');
+
+var sectionOpen = ''; // holds the ID attribute of a section of the page;
+                      // persists through re-fetch of data so we can
+                      // reopen that section when the new data arrives
+var tellMe = '<a href="https://github.com/cTheDragons">tell me</a>';
+
+var neverDate = '1900-01-01'
+
+//////////////////////////////////////////////////////////////////////
+////   allow Show/Hide Toggling to work    ///////////////////////////
+//////////////////////////////////////////////////////////////////////
+enableShowHideToggling(); // needed here to enable Version Changes link
+var openRelatedSections = function(){} // redefined later when user data exists
+function enableShowHideToggling() {
+if (debug) console.log('debug enableShowHideToggling');
+
+	//Populate Selector
+//	var htmlExport =  getExportOptionsHtml()
+//	var htmlDesc =  getExportDescHtml()
+	var htmlSection = getSectionDescHtml()
+	
+//	$('#exportOptionSelector').html(htmlExport)
+//	$('#exportOptionDesc').html(htmlDesc)
+	$('#sectionDesc').html(htmlSection)
+
+    // $('.showHideToggle').click(function(event)
+	$('body').unbind('click')
+    $('body').on('click', '.showHideToggle', function(event){
+        var target = $(this).data("target");
+        var wantToShow = (! $('#' + target).is(':visible')
+                       || $(this).data("forceopen"));
+            // wantToShow is false if the target is already open
+            // (i.e., the user wants to close it)
+            // unless the toggle's attributes force it to always be
+            // opened (e.g., a link from the dashboard)
+        var linktext = $(this).data("linktext") || false;
+        if ($(this).data("closemainsections")) {
+            $('#MAIN > *').hide();
+        }
+        if (wantToShow) {
+            sectionOpen = target;
+            $('#' + target).show();
+            if (linktext) {
+                $(this).text('hide ' + linktext);
+            }
+            openRelatedSections();
+        }
+        else {
+            $('#' + target).hide();
+            if (linktext) {
+                $(this).text('show ' + linktext);
+            }
+            if ($(this).data("scrolltotop")) {
+                window.scrollTo(0, 0);
+            }
+        }
+        var toggleTarget = $(this).data("resettoggletext") || false;
+        if (toggleTarget) {
+            $('#' + toggleTarget).text('show '
+                        + $('#' + toggleTarget).data("linktext"));
+        }
+    });
+    $('body').on('click', '.mainSectionClose', function(event){
+        $('#MAIN > *').hide();
+        window.scrollTo(0, 0);
+    });
+	$('body').on('click', '.div-triadBingo', function(event){
+		triadBingoHatchFeedPet()
+	});
+	
+	
+	function getExportOptionsHtml()
+	{
+		var html = '';
+		
+		html +=  '<label for="exportOption"><span>Column Option</span>'
+		html +=  '<select name="exportOption" id="exportOption">';
+		if (debugShowObject) console.log(exportOptions);
+		$.each(exportOptions, function(index, obj){
+			html += '<option value="' + obj.id + '"'
+			if (obj.id == exportOption) html += ' selected '
+			html += '>' + obj.shortDesc + '</option>';
+		});
+		html += '</select></label>'
+
+		html +=  '<label for="exportFormat"><span>Text Format</span>'
+		html +=  '<select name="exportFormat" id="exportFormat">';
+		if (debugShowObject) console.log(exportOptions);
+		$.each(exportFormats, function(index, obj){
+			html += '<option value="' + obj.id + '"'
+			if (obj.id == exportFormat) html += ' selected '
+			html += '>' + obj.shortDesc + '</option>';
+		});
+		html += '</select></label>'
+
+		
+		return html
+	}
+	
+	function getExportDescHtml()
+	{
+		var html = '';
+		
+		html +=  '<p class="highlight">Column Options Description:</p>'
+		html +=  '<ul>';
+		$.each(exportOptions, function(index, obj){
+			html += '<li><span class="lowlight">' + obj.shortDesc + '</span>: ' + obj.longDesc + '</li>';
+		});
+		html += '</ul>'
+
+		html +=  '<p class="highlight">Text Format Description:</p>'
+		html +=  '<ul>';
+		$.each(exportFormats, function(index, obj){
+			html += '<li><span class="lowlight">' + obj.shortDesc + '</span>: ' + obj.longDesc + '</li>';
+		});
+		html += '</ul>'
+		
+		return html
+	}
+	
+	function getSectionDescHtml()
+	{
+		var html = '';
+		
+		$.each(sectionsToDisplay, function(index, obj){
+			if (obj.type != 'heading') html += '<li><span class="subheading">' + obj.title + '</span>: ' + obj.description + '</li>';
+		});
+		
+		return html
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////
+////   Get UUID from URL      ////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+var url_vars = getUrlVars();
+if (url_vars.uuid) {
+    $("#userId").val(url_vars.uuid);
+}
+function getUrlVars() {
+    // Function found at http://stackoverflow.com/questions/4656843/jquery-get-querystring-from-url#answer-4656873
+    var vars = [], hash;
+    var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+    for(var i = 0; i < hashes.length; i++)
+    {
+        hash = hashes[i].split('=');
+        vars.push(hash[0]);
+        vars[hash[0]] = hash[1];
+    }
+    return vars;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+////   Login events      /////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+$('#userApiDetailsForm').unbind('click')
+$('#userApiDetailsForm').on('click', '.div-fetchData', function(event){
+if (debug) console.log('debug #userApiDetailsForm (Fetch Data)');
+	/* The user manually submitted the API connection form. */
+    userId   = $('#userId').val();
+    apiToken = $('#apiToken').val();
+//	exportOption = $('#exportOption').val()
+//   exportFormat = $('#exportFormat').val()
+	actionLog = []
+	fetchData();
+	
+	$('.showHideToggle').data('target', 'petsSection')
+	$('.showHideToggle').data('closemainsections', 'true')
+	$('.showHideToggle').trigger('click');
+}); 
 
 
 
+//////////////////////////////////////////////////////////////////////
+////   Data Fetch Functions   //////////////////////////////
+//////////////////////////////////////////////////////////////////////
 function fetchData() {
-    if (debug) console.log('debug 2');
-
+    if (debug) console.log('debug fetchData start');
+    $('#loading #serverName').text(serverName);
+    $('#loading .good').show();
+    $('#loading .bad' ).hide();
+	$('#loading .error' ).hide();
+			
     var ajaxRunningCount = 2; // drops to 0 when all calls have succeeded
-
-    // fetch the user's own content (gear owned, etc):
+	
+    // fetch the user's own content (guilds, parties):
+	$('#loading #statusFetch').text('Asking for User Data');
     $.ajax({
         url: serverUrl + serverPathUser,
         type: 'GET',
@@ -86,46 +511,48 @@ function fetchData() {
         error: fetchFailure
     });
 
-
-    // fetch content
+    // fetch the site-wide content (gear names and stats, etc):
+	$('#loading #statusFetch').text('Asking for Generic Content');
     $.ajax({
         url: serverUrl + serverPathContent,
         type: 'GET',
-		data: {type: 'guilds'},
         dataType: 'json',
-        cache: false,
-        beforeSend: function(xhr){
-                xhr.setRequestHeader('x-api-user', userId);
-                xhr.setRequestHeader('x-api-key',  apiToken);
-            },
+        cache: true,
         success: fetchContentSuccess,
-        error: function() { // assume no party
-            party = {}; // no party
-            ajaxRunningCount--;
-            if (ajaxRunningCount === 0) { // all ajax calls have finished
-                parseData();
-            }
-        },
+        error: fetchFailure
     });
+	
 
 	function fetchFailure() {
         if (debug) console.log('debug fetchFailure start');
+        $('#loading .good').hide();
+        $('#loading .bad' ).show();
+        $('#documentationAndForm').show(); // in case user has done a re-fetch
+        $('#documentationAndFormClose').hide();
         if (debug) console.log('debug fetchFailure end');
     }
-    function fetchUserSuccess(data) {
+	function fetchUserSuccess(data) {
         if (debug) console.log('debug parseData User success start');
-		if (debug) console.log(data);
+		$('#loading #statusFetch').text('Fetching User Data');
         user = data.data;
+		
+		userIsAdmin = false;
+		if (user.contributor != undefined) {
+			if (user.contributor.admin) userIsAdmin = true
+		}
+
+		if (debugShowObject) console.log(user);
         ajaxRunningCount--;
         if (ajaxRunningCount === 0) { // all ajax calls have finished
             parseData();
         }
     }
 	
-    function fetchContentSuccess(data) {
-		if (debug) console.log('debug parseData Group success start');
-		if (debug) console.log(data);
+	function fetchContentSuccess(data) {
+        if (debug) console.log('debug parseData Content success start');
+		$('#loading #statusFetch').text('Fetching Generic Content');
         content = data.data;
+		if (debugShowObject) console.log(content);
         ajaxRunningCount--;
         if (ajaxRunningCount === 0) { // all ajax calls have finished
             parseData();
@@ -133,55 +560,288 @@ function fetchData() {
     }
 }
 
-function postFeedPet() {
-	if (debug) console.log('debug postFeedPet start');
-	// Wolf
-	// TigerCub
-	// LionCub
-	// BearCub
-	// Dragon
-	// PandaCub
-	// Fox
-	// FlyingPig
-	// Cactus
-	
-	var pet = 'Snail-Shade'	
-	var food = 'Chocolate'
-	var repeat = 9
-	var index = 0
-	
-	
 
-	if (confirm('Feed ' + food + ' to ' + pet + ' ' + repeat + ' times?')){
-		postNextFeedPet()
+
+//////////////////////////////////////////////////////////////////////
+////  Post functions 				     //////////////////////////////
+//////////////////////////////////////////////////////////////////////
+// All post functions are implemented serial as they are unreliable when performed in parallel.
+function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiStep) {
+	if (debug) console.log('debug postHatchPet start');
+	var urlToPost = ''	
+	var hatchPetList = ''
+	var nothatchPetList = ''
+	var eggKey = ''
+	var potionKey = ''
+	var index = 0 
+	var loopList = []
+	var actionLogId = 'HatchPet'
+	var proceed = noPromptToFeed
+	
+	if (rowData.length == 0){
+		if (debug) console.log('debug no users to remove');
+		alert('No row selected.\nPlease select a row before trying again.');
+		return;
+	
 	} else {
-		alert('Action cancelled')
-		parseData;
+		if (debugShowObject) console.log( rowData );
+		
+		//get UniqueRows
+		for(var i = 0; i < rowData.length; i++) {
+			//Check if can hatch egg first
+			if  ((noPromptToFeed) || (pets[rowData[i][petKeyIndex]].canHatch == 'true')) {
+				notInLoop = true
+				
+				for(var j = 0; j < loopList.length; j++) {
+					if (rowData[i][petKeyIndex] == loopList[j][petKeyIndex]) {
+						notInLoop = false
+						break;
+					}
+						
+				}
+				
+				if (notInLoop) {
+					loopList.push(rowData[i])
+				}
+			} else {
+				nothatchPetList += '\n\u2022  ' + rowData[i][petNameIndex]
+			}
+		}
+		
+		if (nothatchPetList != '') {
+			if (loopList.length == 0 ) {
+				alert('The following pets cannot be hatch: ' + nothatchPetList + '\n\nNo other Pets can be hatch.\n\nAction cancelled')
+				return;
+			
+			}
+			if (confirm('The following pets cannot be hatch: ' + nothatchPetList + '\n\nCancel hatching other pets?')){
+				alert('Action cancelled')
+				return;
+			}
+		}
+
+		for(var i = 0; i < loopList.length; i++)
+		{
+			hatchPetList += '\n\u2022  ' + loopList[i][petNameIndex]
+		}
+		
+		if (noPromptToFeed == false) proceed = (confirm('Are you sure you wish to hatch the following pets?' + hatchPetList + '\n\n'))
+		if (proceed){
+			hatchPetList = ''
+			postNextHatchPet()
+		} else {
+			alert('Action cancelled')
+			return;
+		}
+
 	}
 	
+	//This is done like this as receive ERR_INCOMPLETE_CHUNKED_ENCODING
+	function postNextHatchPet(){
+		$('#posting .good').show();
+		
+		obj = loopList[index]
+			
+		
+		//Get Keys
+		eggKey = pets[obj[petKeyIndex]].egg 
+		potionKey = pets[obj[petKeyIndex]].potion 
+		
+		
+		if ((eggs[eggKey].total > 0) && (potions[potionKey].total > 0)) {
+			eggs[eggKey].total-- //remove one item away
+			potions[potionKey].total-- //remove one item away
+			
+			urlToPost = serverUrl + serverPathHatchPet + '/' + eggKey + '/' + potionKey
+			$('#posting #statusPost').text('Hatching ' + obj[petNameIndex] );
+			createActionLog(actionLogId, false, 'Hatching ' + obj[petNameIndex] );
+			if (debugShowObject) console.log(urlToPost);
+			$.ajax({
+				url: urlToPost,
+				type: 'POST',
+				dataType: 'json',
+				cache: false,
+				beforeSend: function(xhr){
+						xhr.setRequestHeader('x-api-user', userId);
+						xhr.setRequestHeader('x-api-key',  apiToken);
+					},
+				success: postHatchPetSuccess,
+				error: postHatchPetFailure
+			});		
+		} else {
+			//No Eggs To hatch
+			createActionLog(actionLogId, false, 'Not enough eggs or potions to hatch ' + obj[petNameIndex] );
+			index++
+			postHatchPetCompleted()
+		}
+	}
+		
+
+	
+	function postHatchPetFailure(data){
+		if (debug) console.log('debug postHatchPetFailure start');
+		if (debugShowObject) console.log(data);
+		var errData = data;
+		createActionLog(actionLogId, true, errData.responseJSON.message);
+		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errData.responseJSON.error + '\n' + errData.responseJSON.message  + '\n\nPlease refetch your data and try again.');	
+		index++
+		
+		postHatchPetCompleted()
+	}
+
+
+	function postHatchPetSuccess(data){
+		if (debug) console.log('debug postHatchPetSucess start');
+		$('#posting #statusPost').text('Successfully Hatched ' + obj[petNameIndex] + '(' + data.message + ')' );
+		createActionLog(actionLogId, true, data.message);
+		if (debugShowObject) console.log(data);
+		
+
+		index++
+		hatchPetList += '\n\u2022  ' + obj[petNameIndex]  	
+		postHatchPetCompleted()
+		
+	}
+	
+	function postHatchPetCompleted() {
+		if (index === loopList.length){
+			$('#posting .good').hide();
+			if (debugShowObject) console.log(hatchPetList);
+			if (multiStep >= 0) {
+				multiStepArray[multiStep].result = 'The following pets have become mounts:' + hatchPetList
+				multiStepNextAction()
+			} else {	
+				alert('The following pets have been hatched:' + hatchPetList + '\n\nYour data will now be refreshed')
+				fetchData() 
+			}
+		} else {
+			postNextHatchPet()
+		}		
+	
+	}
+}
+
+
+function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKeyIndex, multiStep) {
+	if (debug) console.log('debug postFeedPet start');
+	var urlToPost = ''	
+	var feedPetList = ''
+	var notFeedPetList = ''
+	var index = 0
+	var foodKey 
+	var loopList = []
+	var actionLogId = 'FeedPet'
+	var proceed = noPromptToFeed
+	
+	if (rowData.length == 0){
+		if (debug) console.log('debug no users to remove');
+		alert('No row selected.\nPlease select a row before trying again.');
+		return;
+	
+	} else {
+		if (debugShowObject) console.log( rowData );
+		
+		//get UniqueRows
+		for(var i = 0; i < rowData.length; i++) {
+			//Check if can feed pet first
+			if  ((noPromptToFeed) || ((pets[rowData[i][petKeyIndex]].pet == true) && (pets[rowData[i][petKeyIndex]].foodAvail > 0))) {
+				notInLoop = true
+				
+				for(var j = 0; j < loopList.length; j++) {
+					if (rowData[i][petKeyIndex] == loopList[j][petKeyIndex]) {
+						notInLoop = false
+						break;
+					}
+						
+				}
+				
+				if (notInLoop) {
+					loopList.push(rowData[i])
+				}
+			} else {
+				notFeedPetList += '\n\u2022  ' + rowData[i][petNameIndex]
+			}
+		}
+		
+		if (notFeedPetList != '') {
+			if (loopList.length == 0 ) {
+				alert('The following pets cannot be feed: ' + notFeedPetList + '\n\nNo other Pets can be feed.\n\nAction cancelled')
+				return;
+			
+			}
+			if (confirm('The following pets cannot be feed: ' + notFeedPetList + '\n\nCancel feeding other pets?')){
+				alert('Action cancelled')
+				return;
+			}
+		}
+
+		for(var i = 0; i < loopList.length; i++)
+		{
+			feedPetList += '\n\u2022  ' + loopList[i][petNameIndex]
+		}
+		
+		if (noPromptToFeed == false) proceed = (confirm('Are you sure you wish to feed the following pets?' + feedPetList + '\n\n')) 
+		if (proceed){
+				feedPetList = ''
+				postNextFeedPet()
+		} else {
+			alert('Action cancelled')
+			return;
+		}
+
+	}
 	
 	//This is done like this as receive ERR_INCOMPLETE_CHUNKED_ENCODING
 	function postNextFeedPet(){
 		$('#posting .good').show();
 		
-		urlToPost = serverUrl + serverPathFeedPet + '/' + pet + '/' + food
-		//$('#posting #statusPost').text('Messaging ' + obj[nameIndex] );
-		if (debugShowObject) console.log(urlToPost);
-		//if (debugShowObject) console.log(newData);
-		$.ajax({
-			url: urlToPost,
-			type: 'POST',
-			contentType: 'application/json',
-			//data: JSON.stringify(newData),
-			dataType: 'json',
-			cache: false,
-			beforeSend: function(xhr){
-					xhr.setRequestHeader('x-api-user', userId);
-					xhr.setRequestHeader('x-api-key',  apiToken);
-				},
-			success: postFeedPetSuccess,
-			error: postFeedPetFailure
-		});		
+		obj = loopList[index]
+		
+		//Find Food to use
+		foodKey = ''
+		if (foodKeyIndex = -1) {
+			$.each(food, function(index2, obj2){
+				if (obj2.total > 0 ) {
+					if (pets[obj[petKeyIndex]].type == 'premium') {
+						foodKey = index2
+					} else {
+						if (pets[obj[petKeyIndex]].potion == obj2.target) foodKey = index2
+					}
+				}
+				
+			});
+		} else {
+			if (food[obj[foodKeyIndex]].total > 0 ) {
+				foodKey = obj[foodKeyIndex]
+			}
+		}
+		
+		
+		if (foodKey != '') {
+			food[foodKey].total-- //remove one item away
+	
+			urlToPost = serverUrl + serverPathFeedPet + '/' + obj[petKeyIndex] + '/' + foodKey
+			$('#posting #statusPost').text('Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text );
+			createActionLog(actionLogId, false, 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text);
+			if (debugShowObject) console.log(urlToPost);
+			$.ajax({
+				url: urlToPost,
+				type: 'POST',
+				dataType: 'json',
+				cache: false,
+				beforeSend: function(xhr){
+						xhr.setRequestHeader('x-api-user', userId);
+						xhr.setRequestHeader('x-api-key',  apiToken);
+					},
+				success: postFeedPetSuccess,
+				error: postFeedPetFailure
+			});		
+		} else {
+			//No Food To Feed
+			createActionLog(actionLogId, false, 'Not enough food to feed ' + obj[petNameIndex] );
+			index++
+			postFeedPetCompleted()
+		}
 	}
 		
 
@@ -189,29 +849,41 @@ function postFeedPet() {
 	function postFeedPetFailure(data){
 		if (debug) console.log('debug postFeedPetFailure start');
 		if (debugShowObject) console.log(data);
-		alert('Can not feed pet');	
-		index = repeat
+		var errData = data;
+		createActionLog(actionLogId, true, errData.responseJSON.message);
+		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errData.responseJSON.error + '\n' + errData.responseJSON.message  + '\n\nPlease refetch your data and try again.');	
+		index++
 		
-		postFeedPetCheckCompleted()
+		postFeedPetCompleted()
 	}
 
 
 	function postFeedPetSuccess(data){
 		if (debug) console.log('debug postFeedPetSucess start');
-//		$('#posting #statusPost').text('Succesfully Messaged ' + obj[nameIndex] );
+		$('#posting #statusPost').text('Successfully Feed ' + obj[petNameIndex] + '(' + data.message + ')' );
+		createActionLog(actionLogId, true, data.message);
 		if (debugShowObject) console.log(data);
-//		privateMessageList += '\n\u2022  ' + obj[nameIndex]  
-		index++
 		
-		postFeedPetCheckCompleted()
+		
+		if (data.data <= 0) {
+			index++
+			feedPetList += '\n\u2022  ' + obj[petNameIndex]  
+		}	
+		postFeedPetCompleted()
+		
 	}
 	
-	function postFeedPetCheckCompleted(){
-		if (index === repeat){
+	function postFeedPetCompleted() {
+		if (index === loopList.length){
 			$('#posting .good').hide();
-//			if (debugShowObject) console.log(privateMessageList);
-//			alert('Done!\n\nFed ' + food + 'to ' + pet + ' ' + repeat + ' times')
-			fetchData() 
+			if (debugShowObject) console.log(feedPetList);
+			if (multiStep >= 0) {
+				multiStepArray[multiStep].result = 'The following pets have become mounts:' + feedPetList
+				multiStepNextAction()
+			} else {	
+				alert('The following pets have become mounts:' + feedPetList + '\n\nYour data will now be refreshed')
+				fetchData() 
+			}
 		} else {
 			postNextFeedPet()
 		}		
@@ -219,123 +891,368 @@ function postFeedPet() {
 	}
 }
 
-function parseData() {
-        var dataToDisplay = [];
-		var dataHeader =[];
-		var arrayToAdd = [];
-		dataToDisplaySet = []
-		dataToDisplaySetNoSystem = []
-		
-		userDataInHeader();
-		
-        $.each(user.items.pets, function(index, obj){
-			arrayToAdd = []; //clear array
-			//console.log(index)
-			//modifyChatProperties(obj);
-            //dataToDisplay.push(obj); 
-			//$.each(exportOptions[exportOption].dataTableFormat, function(index2, obj2){
-				arrayToAdd.push(index)
-				arrayToAdd.push(index)
-				arrayToAdd.push(obj)
-			//});
-			//dataToDisplaySet.push([obj.userPretty, obj.uuid, obj.timestamp, obj.text])
-			dataToDisplaySet.push( arrayToAdd)
-		});
-		if (debug) console.log(dataToDisplaySet);
-//		if (debug) console.log(dataToDisplaySetNoSystem);
-		
-		dataHeader = [{title: 'Pet Id'}, {title: 'Name'}, {title: 'Balance'}];
+function manualFeedPet(rowData, petKeyIndex, petNameIndex, foodKey) {
+	if (debug) console.log('debug mannualFeedPet start');
+	var feedPetList = ''
+	var notFeedPetList = ''
+	var index = 0
+	var loopList = []
 
-
+	
+	if (rowData.length == 0){
+		if (debug) console.log('debug no users to remove');
+		alert('No row selected.\nPlease select a row before trying again.');
+		return;
+	
+	} else {
+		if (debugShowObject) console.log( rowData );
 		
-		if ($("#dataToDisplayTable")[0].rows.length != 0){
-			var table = $("#dataToDisplayTable").DataTable();
-			console.log ('Table exists')
-			table.clear();
-			table.draw();
+		//get UniqueRows
+		for(var i = 0; i < rowData.length; i++) {
+			//Check if can feed pet first
+			if  ((pets[rowData[i][petKeyIndex]].pet == true) && (pets[rowData[i][petKeyIndex]].foodAvail > 0)) {
+				notInLoop = true
 				
-			table.rows.add(dataToDisplaySet);
-			table.draw()
-		} else {
-			console.log ('Table does not exists')
-			
-			var events = $('#events');
-			$(document).ready(function() {
-				var table = $('#dataToDisplayTable').DataTable( {
-					data: dataToDisplaySet,
-					columns: dataHeader,
-					columnDefs: [
-						{ targets: [0, 1, 2], visible: true},
-						{ targets: '_all', visible: false }
-					],
-					order: [2, 'desc'],
-					lengthMenu: [ [100, 200, 500, -1], [100, 200, 500, "all"] ],
-					select: true,
-					colReorder: true,				
-					dom: 'Bfrtip',
-					buttons: [
-						 'pageLength', 
-						 {
-							extend: 'collection',
-							text: 'Show/Hide',
-							buttons: ['columnsToggle']
-						},
-						{
-							extend: 'collection',
-							text: 'Print/Copy/Export',
-							buttons: [ 
-								'print', 'copy', {
-									extend: 'pdf',
-									filename: 'Test'
-								}, {
-									extend: 'excel',
-									filename: 'Test'
-								}, {
-									extend: 'csv',
-									filename: 'Test'
-								}						
-							],
-							autoClose: true
-						},
-						{
-							text: 'Id Of Selected',
-							action: function () {
-								var rowData = table.rows( { selected: true } ).data().toArray();
-	 
-								console.log( rowData );
-							}
-						}					
-					],
-					
-					
-				} );
-			} );
-		
+				for(var j = 0; j < loopList.length; j++) {
+					if (rowData[i][petKeyIndex] == loopList[j][petKeyIndex]) {
+						notInLoop = false
+						break;
+					}
+						
+				}
+				
+				if (notInLoop) {
+					loopList.push(rowData[i])
+				}
+			} else {
+				notFeedPetList += '\n\u2022  ' + rowData[i][petNameIndex]
+			}
 		}
 		
+		if (notFeedPetList != '') {
+			if (loopList.length == 0 ) {
+				alert('The following pets cannot be feed: ' + notFeedPetList + '\n\nNo other Pets can be feed.\n\nAction cancelled')
+				return;
+			
+			}
+			if (confirm('The following pets cannot be feed: ' + notFeedPetList + '\n\nCancel feeding other pets?')){
+				alert('Action cancelled')
+				return;
+			}
+		}
+
+		for(var i = 0; i < loopList.length; i++)
+		{
+			loopList[i].push(foodKey)
+			feedPetList += '\n\u2022  ' + loopList[i][petNameIndex]
+		}
+		
+		if (confirm('Are you sure you wish to feed the following pets with ' + food[foodKey].text + ' ?' + feedPetList + '\n\n')){
+			postFeedPet(loopList, petKeyIndex, petNameIndex, true, (loopList[0].length-1), -1)
+		} else {
+			alert('Action cancelled')
+			return;
+		}
+
+	}
+}
+
+function triadBingoHatchFeedPet() {
+	var hatchFirst = []
+	var feedSecond = []
+	var hatchThird = []
+	var arrayToAdd = []
+	multiStepArray = []
+	multiStep = 0
+	
+	if (confirm('Hatch eggs and feed pets to complete Triad Bingo?')) {
+
+	
+		$.each(pets, function(index, obj){
+			if (obj.type == 'drop') {
+				arrayToAdd = [index, obj.text]
+				if ((obj.pet == false) && (obj.mount == false)) {
+					
+					hatchFirst.push(arrayToAdd)
+					feedSecond.push(arrayToAdd)
+					hatchThird.push(arrayToAdd)
+				
+					
+				} else if ((obj.pet == true) && (obj.mount == false)) {
+					
+					feedSecond.push(arrayToAdd)
+					hatchThird.push(arrayToAdd)					
+					
+				} else if ((obj.pet == false) && (obj.mount == true)) {
+				
+					hatchThird.push(arrayToAdd)	
+				
+				}
+			}
+				
+		});
+
+		multiStepArray.push({action: 'postHatchPet', dataSet: hatchThird, petKeyIndex: 0, petNameIndex: 1, result: ''})
+		if (feedSecond.length > 0) multiStepArray.push({action: 'postFeedPet', dataSet: feedSecond, petKeyIndex: 0, petNameIndex: 1, result: ''})	
+		if (hatchFirst.length > 0) multiStepArray.push({action: 'postHatchPet', dataSet: hatchFirst, petKeyIndex: 0, petNameIndex: 1, result: ''})
+		multiStep = multiStepArray.length 
+		multiStepNextAction()
+		
+	}
+}
+
+function multiStepNextAction() {
+	multiStep--
+	if (multiStep >= 0) {
+		if (multiStepArray[multiStep].action == 'postFeedPet') {
+			postFeedPet(multiStepArray[multiStep].dataSet, multiStepArray[multiStep].petKeyIndex, multiStepArray[multiStep].petNameIndex, true, -1, multiStep)
+		} else {
+			postHatchPet(multiStepArray[multiStep].dataSet, multiStepArray[multiStep].petKeyIndex, multiStepArray[multiStep].petNameIndex, true, multiStep)		
+		}
+	} else {
+		alert('All steps completed!\n\nSee Log for more detail after data is refreshed.')
+		fetchData()
+	}
 }
 
 
-function modifyChatProperties(obj) {
-	//obj.textPretty  = renderFormattedText(obj.text, {'setParaClass':'chatText'});
-	//obj.userPretty  = renderFormattedText(obj.user, {'setParaClass':'userName'});
-	//obj.creation  = reformatDate(obj.timestamp);
-	if (obj.uuid == 'system') {
-		obj.userPretty = 'System'
-	} else {
-		obj.userPretty = obj.user
-	}
-		
-		
-//	function reformatDate(dateString) {
-//		var formattedDate = myDateConverter(dateString, 'long');
-//		var shortDate     = myDateConverter(dateString, 'short');
-//		return { 'dateAndTime': formattedDate,
-//				 'shortDate': shortDate };
-//	}
-		
-} 
 
+function createActionLog(actionLogId, response, message) {
+	var addToArray = {}
+	var epoch = moment().valueOf() 
+	
+	addToArray = {epoch: epoch, actionLogId: actionLogId, response: response, message: message} 
+	actionLog.push(addToArray)
+
+}
+
+
+//////////////////////////////////////////////////////////////////////
+////  Parse Data		      //////////////////////////////
+//////////////////////////////////////////////////////////////////////	
+function parseData() {
+	if (debug) console.log('debug parseData start');
+
+	
+    // variables for storing the content:
+    var MAIN = {}; // each element defines the HTML for one section on the page
+    var TOC  = {}; // each element defines one Table of Contents entry
+    var DASHBOARD = {}; // each element defines the HTML for one dashboard tile
+
+	var fetchtime = myDateConverter(new Date(), 'pretty');
+	
+
+    collateAndDisplayData(); //This is one function as memberActivty requires both Member and Guild data.
+
+	userDataInHeader();
+
+	
+	//////////////////////////////////////////////////////////////////////
+    ////   Display the HTML that the functions have created   ////////////
+    //////////////////////////////////////////////////////////////////////
+    $('#loading #statusFetch').text('') //All Done
+	$('#loading .good').hide();
+	$('#posting .good').hide(); // just to be sure
+    $('#documentationAndFormClose').show();
+    $('#documentationAndForm').hide();
+	
+	//formatAndDisplayDASHBOARD();
+    formatAndDisplayTOC();
+	
+	
+	if ($('#MAIN')[0].innerHTML.length > 1) {
+		//Keep previous table settings
+		refreshAndDisplayMAIN();
+	} else {
+		formatAndDisplayMAIN();
+	}
+	
+	function formatAndDisplayDASHBOARD() {
+		// Not required to be changed. Section controlled by Sections defined above.
+		var html = '<ul>';
+		var valueToDisplay = ''
+		
+		$.each(dashboardToDisplay, function(index, obj){
+			if (obj.showOnly.length == 0 || (obj.showOnly.includes('party') == true && groupId == 'party') || (obj.showOnly.includes('leader') == true && ((userId == group.leader.id) || (userIsAdmin)))) {
+				var data = obj;
+				
+				var classes = (data.hidden) ? 'hide' : '';
+				html += '<li ';
+				if (data.id) {
+					// id is needed only if other code will change tile background
+					html += 'id="' + data.id + '" ';
+				}
+				html += 'title="' + data.hoverText + '" ';
+				if (data.target) {
+					html += 'data-target="' + data.target +
+							'" data-closemainsections="true" data-forceopen="true" ' +
+							'class="showHideToggle ' + classes + '"';
+				}
+				
+				valueToDisplay = eval(data.value)
+				
+				html += '><div class="' +
+						data.status     + '"><div class="value">' +
+						valueToDisplay      + '</div><div class="label">' +
+						data.label      + '</div></div></li>';
+			}
+		});
+
+
+		html += '</ul><div class="clear"></div>';
+		if (debugShowObject) console.log(html);
+		$('#DASHBOARD').html(html);
+	}
+
+	
+	function formatAndDisplayTOC() {
+		// Not required to be changed. Section controlled by Sections defined above.
+		var keys = []
+		var keyToAdd = ''
+		
+		$.each(sectionsToDisplay, function(index, obj){
+			keyToAdd=''
+			if (obj.showOnly.length == 0 || (obj.showOnly.includes('party') == true && groupId == 'party') || (obj.showOnly.includes('leader') == true && ((userId == group.leader.id) || (userIsAdmin)))) {
+				if (obj.type != 'heading'){
+					keyToAdd = obj.id
+				} else {
+					keyToAdd = 'HEADING'  
+					if (obj.title != '') keyToAdd = keyToAdd + ' ' + obj.title
+				}
+				if (keyToAdd != '') keys.push(keyToAdd)
+			}
+		});
+		if (debugShowObject) console.log(keys);
+		
+		var html = '';
+		for (var i=0,ic=keys.length; i<ic; i++) {
+			if (keys[i].match(/^HEADING/)) { // new section in Table of Contents
+				var title = keys[i].replace(/^HEADING/, '');
+				if (html) {
+					html += '</ul></li>'; // close the previous section
+				}
+				html += '<li>' + title + (title ? ':' : '&nbsp;') + '<ul>';
+			}
+			else {
+				var data = TOC[keys[i]];
+				if (! data) {
+					continue;
+				}
+				html += '<li class="showHideToggle" data-target="' +
+						data['target'] + '" data-closemainsections="true">' +
+						data['title']  + '</li>';
+			}
+		}
+		html += '</ul></li></ul>'; // close the final section, and the parent ul
+		$('#TOC').html('<ul id="tableOfContents">' + html +
+					   '</ul><div class="clear"></div><hr class="padded" />');
+	}
+
+	function formatAndDisplayMAIN() {
+		// Not required to be changed. Section controlled by Sections defined above.
+		var keys = [];
+		var keyToAdd = ''
+		
+		$.each(sectionsToDisplay, function(index, obj){
+			keyToAdd=''
+			if (obj.showOnly.length == 0 || (obj.showOnly.includes('party') == true && groupId == 'party') || (obj.showOnly.includes('leader') == true && ((userId == group.leader.id) || (userIsAdmin)))) {
+				keyToAdd = obj.id
+				if (obj.type == 'heading') keyToAdd = ''
+				if (keyToAdd != '') keys.push(keyToAdd)
+			}
+		});
+		if (debugShowObject) console.log(keys);
+		
+		var html = '';
+		var functions = []; // functions to run after HTML code has been loaded
+		var functionsPar = []; //Par to be passed in Function
+		for (var i=0,ic=keys.length; i<ic; i++) {
+			var data = MAIN[keys[i]];
+			if (! data) {
+				continue;
+			}
+			html += '<div id="' +
+					data.id     + '"><h2>' +
+					data.title  + '</h2>' +
+					data.html   +
+					((data.longContent) ? '<div class="mainSectionClose closer">' +
+										  'close / back to top</div>' : '') +
+					'</div>';
+			if (data['function']) {
+				functions.push(data['function']);
+				functionsPar.push(data['functionPar']);
+			}
+		}
+		$('#MAIN').html(html);
+		// execute any functions that need to be run AFTER the bulk of the
+		// HTML has been created:
+		$.each(functions, function(index,fn){
+			var passPar = functionsPar[index];
+			fn(passPar);
+		});
+		if (sectionOpen && sectionOpen  !=  'documentationAndForm'
+						&& sectionOpen  !=  'versionChanges'
+		) {
+			// reopen the section that the user had open before re-fetching
+			// data (except for sections that don't display the user's own data):
+			$('#' + sectionOpen).show();
+			openRelatedSections();
+		}
+	}
+
+	function refreshAndDisplayMAIN() {
+		// Not required to be changed. Section controlled by Sections defined above.
+		var keys = [];
+		var keyToAdd = ''
+		
+		$.each(sectionsToDisplay, function(index, obj){
+			keyToAdd=''
+			if (obj.showOnly.length == 0 || (obj.showOnly.includes('party') == true && groupId == 'party') || (obj.showOnly.includes('leader') == true && ((userId == group.leader.id) || (userIsAdmin)))) {
+				keyToAdd = obj.id
+				if (obj.type == 'heading') keyToAdd = ''
+				if (keyToAdd != '') keys.push(keyToAdd)
+			}
+		});
+		if (debugShowObject) console.log(keys);
+		
+		var html = '';		
+		var functions = []; // functions to run after HTML code has been loaded
+		var functionsPar = []; //Par to be passed in Function
+		for (var i=0,ic=keys.length; i<ic; i++) {
+			var data = MAIN[keys[i]];
+			if (! data) {
+				continue;
+			}
+
+			html = data.refreshHtml
+			$('#' + data.id + ' #' + data.refreshId).html(html)
+			
+			if (data['function']) {
+				functions.push(data['function']);
+				functionsPar.push(data['functionPar']);
+			}
+		}
+
+		// execute any functions that need to be run AFTER the bulk of the
+		// HTML has been created:
+		$.each(functions, function(index,fn){
+			var passPar = functionsPar[index];
+			fn(passPar);
+		});
+		if (sectionOpen && sectionOpen  !=  'documentationAndForm'
+						&& sectionOpen  !=  'versionChanges'
+		) {
+			// reopen the section that the user had open before re-fetching
+			// data (except for sections that don't display the user's own data):
+			$('#' + sectionOpen).show();
+			openRelatedSections();
+		}
+	}
+
+	openRelatedSections = function() {
+
+	}
+	
 	function userDataInHeader() {
 		var displayName = user.profile.nameNotPretty //renderFormattedText(user.profile.name);
 		
@@ -344,40 +1261,1415 @@ function modifyChatProperties(obj) {
 				'</div>' +
 				'<div id="explanationAndClearLinks">' +
 				'<input id="refetch" type="submit" value="' +
-				'Feed Again " />' +
-//				'<span id="documentationAndFormToggle" class="showHideToggle" data-target="documentationAndForm" data-linktext="documentation" data-closemainsections="true">show documentation / options</span>' +
+				'Re-Fetch Data (last fetched ' + fetchtime + ')" />' +
+				'<span id="documentationAndFormToggle" class="showHideToggle" data-target="documentationAndForm" data-linktext="documentation" data-closemainsections="true">show documentation / options</span>' +
 				'</div>'  				
 				
 		);
 		$('#refetch').click(function(event){
 			/* The user clicked on the Re-Fetch My Data button. */
-			postFeedPet();
-			
-			var table = $("#dataToDisplayTable").DataTable();
-			
-			$(document).ready(function() {
-				$("#table2").DataTable();
-			});
-			
-			
+			fetchData();
 		});
 	}
+	
+	//////////////////////////////////////////////////////////////////////
+    ////   Formatting Functions used throughout  			  ////////////
+    //////////////////////////////////////////////////////////////////////	
+	
+	function myDateConverter(date, style) { 
+
+		var dateStr = '';
+					
+		if (style === 'pretty') {
+			dateStr = moment(date).format('Do MMM YYYY, H:mm:ss');
+		} else if (style === 'short') {
+			if (date == neverDate) {
+				dateStr = '-N/A-'
+			} else {
+				dateStr = moment(date).format('YYYY-MM-DD H:mm:ss');
+			}
+		} else if (style === 'long') {
+			dateStr = moment(date).format('ddd Do MMMM YYYY, h:mm:ss a');
+		} else if (style === 'utcTime') {
+			dateStr = moment(date).utc().toISOString();
+		} else if (style === 'relativeTime') {
+			if (date == neverDate) {
+				dateStr = '-N/A-'
+			} else {
+				dateStr = moment(date).fromNow();
+			}
+		}	else {
+			var dateStr = moment(date).format(style);
+		}
+		return dateStr;
+	}
+
+	function renderFormattedText(text, options) {
+		var md = window.habiticaMarkdown;
+		
+		if (exportFormats[exportFormat].convertMarkup) text = md.render(text);
+		if (exportFormats[exportFormat].removeHtml) text = $(text).text();
+		if (exportFormats[exportFormat].convertLineBreaks) text = text.replace(/(?:\r\n|\r|\n)/g, '<br />');
+		if (options && options.removeParaTags) {
+            text = String(text).replace(/^<p>|<\/p>\n$/g, '');
+        }
+        else if (options && options.setParaClass) {
+            text = String(text).replace(/<p>/g,
+                       '<p class="' + options.setParaClass + '">');
+        }
+		return text;
+	}
+	
+	function toTitleCase(str)
+	{
+		return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+	}
+	
+	function constructTable(passPar) {
+		//Called in Main to display table(s).
+		//Will need to be added to add buttons and row selection on the fly.
+		var formattedTableHeader = [];
+		var dataSetSectionId = passPar[0];
+		var dataSetTable = passPar[1];
+		var dataSetTableHeader = passPar[2];
+		var dataSetTableSection = passPar[3];
+		
+		var defaultShow = []
+		var defaultOrderBy = []
+		var buttonCollectionColumnOption = []
+		var selectValue = false
+		var showButtons = []
+		var allColumnDefs = []
+		
+		var showOptions = []
+		var hideOptions = []
+		
+		if (debug) console.log('debug constructTable ' + dataSetSectionId);		
+		
+		if ($('#'+ dataSetTableSection)[0].rows.length != 0){
+			if (debug) console.log ('Table exists')
+
+			var table = $('#'+ dataSetTableSection).DataTable();
+
+			table.clear();
+			table.draw();
+				
+			table.rows.add(dataSetTable);
+			table.draw()
+		} else {
+			if (debug) console.log ('Table does not exists')
+			//create column header
+			$.each(dataSetTableHeader, function(index, obj){
+				formattedTableHeader.push({'title': obj, 'classname': dataSetTableSection + '_' + obj.replace(/ /g, ''),  'defaultContent': ''})
+			});
+			
+			if (debugShowObject) console.log(formattedTableHeader);
+			
+			
+			showButtons = formatShowButton()
+			
+			if (debugShowObject) console.log(showButtons);
+
+			allColumnDefs = [
+				{ targets: defaultShow, visible: true},
+				{ targets: '_all', visible: false }
+			]
+			allColumnDefs = allColumnDefs.concat(sectionTables[dataSetSectionId].extraColumnDefs)
+			
+			if (debugShowObject) console.log(allColumnDefs);
+
+			
+			sectionTables[dataSetSectionId].events = $('#events');
+			$(document).ready(function() {
+				sectionTables[dataSetSectionId].table = $('#'+ dataSetTableSection).DataTable( {
+					data: dataSetTable,
+					columns: formattedTableHeader,
+					columnDefs: allColumnDefs,
+					order: defaultOrderBy,
+					lengthMenu: [ [10, 25, 50, 100, 200, 500, -1], [10, 25, 50, 100, 200, 500, "All"] ],
+					select: selectValue, 
+					dom: 'Bfrtip',
+					buttons: showButtons
+					
+				} );
+			} );
+		}
+		
+		function formatShowButton() {
+			var returnButtons = []
+		
+	
+			//create export options
+			$.each(exportOptions, function(index, obj){
+				
+				//Work out the hidden column list
+				showOptions[obj.id] = eval('sectionTables[dataSetSectionId].' + obj.id + '.show')
+				hideOptions[obj.id] = [];
+				
+				if (showOptions[obj.id][0] == 'all'){
+					showOptions[obj.id] = []; // clear array
+					for (i = 0; i < sectionTables[dataSetSectionId].dataTable.length; i++) { 
+						showOptions[obj.id].push(i)
+					}
+					
+				} else {
+					for (i = 0; i < sectionTables[dataSetSectionId].dataTable.length; i++) { 
+						if (showOptions[obj.id].indexOf(i) == -1) hideOptions[obj.id].push(i)
+					}
+				}
+				buttonCollectionColumnOption.push({
+									extend: 'colvisGroup',
+									text: obj.shortDesc,
+									show: showOptions[obj.id],
+									hide: hideOptions[obj.id],
+									className: 'columnGroupButton'
+								})					
+			});
+			buttonCollectionColumnOption.push('columnsToggle')
+			defaultShow = showOptions[exportOption]
+			defaultOrderBy = eval('sectionTables[dataSetSectionId].' + exportOption + '.orderBy')
+			
+			if (debugShowObject) console.log(showOptions);		
+			if (debugShowObject) console.log(hideOptions);	
+		
+			returnButtons = [
+				 'pageLength', 
+				 {
+					extend: 'collection',
+					text: 'Show/Hide',
+					buttons: buttonCollectionColumnOption
+				},
+/*				{
+					text: exportFormats[0].shortDesc,
+					action: function ( e, dt, node, config ) {
+						exportFormat = exportFormats[0].id;
+						parseData();
+					}
+				},
+				{
+					text: exportFormats[1].shortDesc,
+					action: function ( e, dt, node, config ) {
+						exportFormat =  exportFormats[1].id;
+						parseData();
+					}
+				},
+				{
+					text: exportFormats[2].shortDesc,
+					action: function ( e, dt, node, config ) {
+						exportFormat =  exportFormats[2].id;
+						parseData();
+						}
+				},
+*/				{
+					extend: 'collection',
+					text: 'Print/Copy/Export',
+					buttons: [ 
+						 {
+							extend: 'print',
+							exportOptions: {
+								columns: ':visible'
+							}
+						}, {
+							extend: 'copy',
+							exportOptions: {
+								columns: ':visible'
+							}
+						}, {
+							extend: 'pdf',
+							filename: 'BulkFeed',
+							exportOptions: {
+								columns: ':visible'
+							}	
+						}, {
+							extend: 'excel',
+							filename: 'BulkFeed',
+							exportOptions: {
+								columns: ':visible'
+							}	
+						}, {
+							extend: 'csv',
+							filename: 'BulkFeed',
+							exportOptions: {
+								columns: ':visible'
+							}	
+						}						
+					],
+					autoClose: true
+				}
+			]
+
+			
+			if (sectionTables[dataSetSectionId].extraButton != undefined) {
+				var extraButton = sectionTables[dataSetSectionId].extraButton();
+				returnButtons = returnButtons.concat(extraButton)
+				selectValue = true
+			}
+			
+			return returnButtons
+		}
+		
+		function transformButton() {
+			var returnButton = [{
+				extend: 'collection',
+				text: 'Transform',
+				buttons: [{
+					text: 'Snowball',
+					action: function ( e, dt, node, config ) {
+						var rowData = sectionTables[dataSetSectionId].table.rows( { selected: true } ).data().toArray();
+						var uuidIndex = sectionTables[dataSetSectionId].uuidIndex;
+						postTransformMember('Snowball', rowData, uuidIndex)
+						
+					}
+				}],
+				autoClose: true
+			}]
+			
+			return returnButton
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	//////////////////////////////////////////////////////////////////////
+    ////   Math Functions  					 ////////////
+    //////////////////////////////////////////////////////////////////////
+	function mean(numbers) {
+	////   by Paul_Wilkins  					 ////////////
+	// mean of [3, 5, 4, 4, 1, 1, 2, 3] is 2.875
+		var total = 0,
+			i;
+		for (i = 0; i < numbers.length; i += 1) {
+			total += numbers[i];
+		}
+		return total / numbers.length;
+	}
+	function median(numbers) {
+	////   based on code by Paul_Wilkins  					 ////////////
+		// median of [3, 5, 4, 4, 1, 1, 2, 3] = 3
+		var median = 0,
+			numsLen = numbers.length;
+		numbers.sort(function(a, b){return a - b});
+		if (numsLen % 2 === 0) { // is even
+			// average of two middle numbers
+			median = (numbers[numsLen / 2 - 1] + numbers[numsLen / 2]) / 2;
+		} else { // is odd
+			// middle number only
+			median = numbers[(numsLen - 1) / 2];
+		}
+		return median;
+	}
+	function mode(numbers) {
+	////   by Daniel http://danielpike.me.uk/finding-mode-element-in-an-array/ 					 ////////////
+
+	    var mode = {};
+		var max = 0, count = 0;
+
+		numbers.forEach(function(e) {
+			if (mode[e]) { mode[e]++; }
+			else { mode[e] = 1; } 
+
+			if (count<mode[e]) { 
+				max = e;
+				count = mode[e];
+			}
+		});
+		
+		return max;
+	}
+	
+	function range(numbers) {
+		numbers.sort(function(a, b){return a - b});
+		return (String(numbers[0]) + ' to ' + String(numbers[numbers.length - 1]))
+	}
+	
+	function smallest(numbers) {
+		numbers.sort(function(a, b){return a - b});
+		return (numbers[0])
+	}
+	
+	function largest(numbers) {
+		numbers.sort(function(a, b){return a - b});
+		return (numbers[numbers.length - 1])
+	}
+
+	
+	
+	//////////////////////////////////////////////////////////////////////
+    ////   Collate and Display Data  					 ////////////
+    //////////////////////////////////////////////////////////////////////
+	function collateAndDisplayData() {
+	
+	
+		//format collate Data -- one function
+		formatAllDataAndCollate();
+		
+		//run functions to create for TOC / MAIN 
+		$.each(sectionsToDisplay, function(index, obj){
+			if (obj.type == 'sectionTable') {
+				if (obj.showOnly.length == 0 || (obj.showOnly.includes('party') == true && groupId == 'party') || (obj.showOnly.includes('leader') == true && ((userId == group.leader.id) || (userIsAdmin)))) {
+					formatTableSection(obj.id, obj.title)
+				}
+			} else if (obj.type == 'sectionCustom') {
+				var fn = obj.functionCreate
+				eval(fn + '("' + obj.id + '", "' + obj.title + '")')
+			}
+			
+		});
+		
+		
+		
+	//////////////////////////////////////////////////////////////////////
+    //     Prep data before using                            ////////////
+	//
+	//     This is where you modify data to be used throughout
+	//     All data is modified here
+    //////////////////////////////////////////////////////////////////////
+		
+		function formatAllDataAndCollate() {
+			pets = {};
+			eggs = {};
+			potions = {};
+			food = {};
+			triadBingoRequirement = {};
+			canTriadBingo = true;
+			
+			
+			var arrayToAdd = []; //Used to create final array to add to dataSet
+			
+			//arrays to construct stuff because I like altering things in one place than trailing through code... (Didn't do too well with this section).	
+			foodTarget = ['Base', 'CottonCandyBlue', 'CottonCandyPink', 'Desert', 'Golden', 'Red', 'Shade', 'Skeleton', 'White', 'Zombie']
+			
+			///////////////////////////////////////////////////////////////
+			////   Single   Data                              ////////////
+			//////////////////////////////////////////////////////////////
+			if (debug) console.log('debug formatAllDataAndCollate Single Data Variables');
+			
+			
+			//User
+			modifyUserProperties()	
+			
+			user.feedStats = {}
+			user.feedStats.notHatchCount = 0			
+			user.feedStats.petFeedCount = 0
+			user.feedStats.mountCount = 0
+			user.feedStats.petNoFeedCount = 0
+			user.feedStats.petRareCount = 0
+			user.feedStats.mountRareCount = 0
+			user.feedStats.notHatchBaseCount = 0
+			user.feedStats.petFeedBaseCount = 0
+			user.feedStats.mountBaseCount = 0
+			user.feedStats.petNoFeedBaseCount = 0
+			user.feedStats.eggBaseCount = 0
+			user.feedStats.potionBaseCount = 0
+			
+			user.feedStats.food = {}
+			$.each(foodTarget, function(index, obj){
+				user.feedStats.food[obj] = 0
+			});
+			user.feedStats.food.all = 0
+
+			// Loop through all pets to create a base all items to be populated (avoid messy undefines later)
+			//Food
+			$.each(content.food, function(index, obj){
+				if (obj.target != undefined) {
+					food[index] = obj
+					
+					food[index].total = user.items.food[index]
+					user.feedStats.food[obj.target] += user.items.food[index]
+					user.feedStats.food.all += user.items.food[index]
+					
+				}
+			});			
+
+			//Eggs
+			$.each(content.eggs, function(index, obj){
+					eggs[index] = obj
+					
+					eggs[index].total = user.items.eggs[index]
+					
+					//Set up empty stats
+					eggs[index].feedStats = {}
+					eggs[index].feedStats.count = 0
+					eggs[index].feedStats.notHatchCount = 0
+					eggs[index].feedStats.petFeedCount = 0
+					eggs[index].feedStats.mountCount = 0
+					eggs[index].feedStats.petNoFeedCount = 0
+
+					
+					if (content.dropEggs[index] != undefined) {
+						triadBingoRequirement['egg_' + index] = {key: index, type: 'egg', text: eggs[index].text, require: 20, need: 20}
+					}
+			});	
+
+			//Potions
+			$.each(content.hatchingPotions, function(index, obj){
+					potions[index] = obj
+					
+					potions[index].total = user.items.hatchingPotions[index]
+
+					//Set up empty stats
+					potions[index].feedStats = {}
+					potions[index].feedStats.count = 0
+					potions[index].feedStats.notHatchCount = 0 
+					potions[index].feedStats.petFeedCount = 0
+					potions[index].feedStats.mountCount = 0
+					potions[index].feedStats.petNoFeedCount = 0
+
+					if (obj.premium == true) {
+						obj.foodAvail = user.feedStats.food.all
+					} else {
+						obj.foodAvail = user.feedStats.food[index]
+					}
+					
+					if (content.dropHatchingPotions[index] != undefined) {
+						triadBingoRequirement['potion_' + index] = {key: index, type: 'potion', text: potions[index].text, require: 18, need: 18}
+						triadBingoRequirement['food_' + index] = {key: index, type: 'food', text: potions[index].text + ' Food', require: 81, need: 81}
+					}
+			});	
+
+			//Pets
+			$.each(content.petInfo, function(index, obj){
+				if (obj.type != 'special') {
+					pets[index] = obj
+					pets[index].eggPretty = eggs[pets[index].egg].text
+					pets[index].potionPretty = potions[pets[index].potion].text
+					pets[index].canHatch = 'false' //will be altered throughout if statements if required
+					if ((eggs[pets[index].egg].total > 0 ) && (potions[pets[index].potion].total > 0)) pets[index].canHatch = 'true'
+					
+					if (obj.type != 'premium') eggs[pets[index].egg].feedStats.count++
+					potions[pets[index].potion].feedStats.count++
+					if (obj.type != 'premium') eggs[pets[index].egg].feedStats.type = obj.type
+					
+					//Does User have Pet & Mount?
+					if (user.items.pets[index] != undefined) {
+						if (user.items.mounts[index] == true) {
+							pets[index].mount = true
+							user.feedStats.mountCount++
+							if (obj.type == 'drop') user.feedStats.mountBaseCount++
+							if (obj.type != 'premium') eggs[pets[index].egg].feedStats.mountCount++
+							potions[pets[index].potion].feedStats.mountCount++
+						
+							pets[index].feedValue = 0
+							if (user.items.pets[index] > 0) {
+								pets[index].pet = true
+								pets[index].canHatch = '-N/R-'
+								if (obj.type != 'premium') eggs[pets[index].egg].feedStats.petNoFeedCount++
+								potions[pets[index].potion].feedStats.petNoFeedCount++
+								user.feedStats.petNoFeedCount++
+								if (obj.type == 'drop') user.feedStats.petNoFeedBaseCount++
+								
+							} else {
+								pets[index].pet = false
+							}
+							
+							pets[index].foodAvail = undefined
+
+						} else {
+							pets[index].mount = false
+							
+							pets[index].feedValue = user.items.pets[index] * 2 / 10
+							if (user.items.pets[index] > 0) {
+								pets[index].pet = true
+								if (obj.type != 'premium') eggs[pets[index].egg].feedStats.petFeedCount++
+								potions[pets[index].potion].feedStats.petFeedCount++
+								user.feedStats.petFeedCount++
+								if (obj.type == 'drop') user.feedStats.petFeedBaseCount++	
+								if (pets[index].canHatch == 'true' ) pets[index].canHatch = 'After Fed'
+							} else {
+								pets[index].pet = false
+							}
+							if (obj.type == 'premium') {
+								pets[index].foodAvail = user.feedStats.food.all
+							} else {
+								pets[index].foodAvail = user.feedStats.food[obj.potion]
+							}
+						}
+					} else {
+							pets[index].feedValue = 0
+							pets[index].mount = false
+							pets[index].pet = false
+							if (obj.type != 'premium') eggs[pets[index].egg].feedStats.notHatchCount++
+							potions[pets[index].potion].feedStats.notHatchCount++
+							user.feedStats.notHatchCount++
+							if (obj.type == 'drop') user.feedStats.notHatchBaseCount++	
+
+							if (obj.type == 'premium') {
+								pets[index].foodAvail = user.feedStats.food.all
+							} else {
+								pets[index].foodAvail = user.feedStats.food[obj.potion]
+							}
+					}
+
+					//triad Bingo
+					if (pets[index].type == 'drop') {				
+						//Do we need food? Do we have a mount?
+						if (pets[index].mount == true) {
+							//No food required
+							triadBingoRequirement['food_' + pets[index].potion].require -= 9
+							
+							//Do we need another egg and potion?
+							if (pets[index].pet == true){
+								triadBingoRequirement['egg_' + pets[index].egg].require -= 2
+								triadBingoRequirement['potion_' + pets[index].potion].require -= 2
+							} else {
+								triadBingoRequirement['egg_' + pets[index].egg].require -= 1
+								triadBingoRequirement['potion_' + pets[index].potion].require -= 1
+							}
+						} else {
+							//No mount need food
+							if (pets[index].pet == true) {
+								//require some food require and only  1 egg
+								triadBingoRequirement['food_' + pets[index].potion].require -= (pets[index].feedValue - 1) //Always start with 1 if there is a pet
+								triadBingoRequirement['egg_' + pets[index].egg].require -= 1
+								triadBingoRequirement['potion_' + pets[index].potion].require -= 1
+							}
+						}
+					}				
+					
+				} else {
+					if (user.items.pets[index] > 0) user.feedStats.petRareCount++
+					if (user.items.mounts[index] == true) user.feedStats.mountRareCount++
+				}
+				
+			});
+		
+			
+			///////////////////////////////////////////////////////////////
+			////   Process Sections / Table / Count Values     ////////////
+			//////////////////////////////////////////////////////////////
+			if (debug) console.log('debug formatAllDataAndCollate Secion/tableData');
+			
+			//Clear arrays
+			$.each(sectionsToDisplay, function(index, obj){
+				if (obj.type == 'sectionTable'){
+					sectionTables[obj.id].dataSet=[];
+				}
+			});
+			if (debugShowObject) console.log(sectionTables);	
+			
+						
+			///////////////////////////////////////////////////////////////
+			////   Potions									  ////////////
+			//////////////////////////////////////////////////////////////
+			$.each(potions, function(index, obj){
+				
+				$.each(sectionsToDisplay, function(index2, obj2){
+					if (obj2.type == 'sectionTable' ) {
+						if (sectionTables[obj2.id].type == 'potions'){
+							addToArray = []; //clear array
+							$.each(sectionTables[obj2.id].dataTable, function(index3, obj3){
+								addToArray.push(eval('obj.' + obj3))
+							});
+							sectionTables[obj2.id].dataSet.push(addToArray);
+						}
+					}
+				});
+			});
+			if (debug) console.log('Finish potions');
+
+			///////////////////////////////////////////////////////////////
+			////   Eggs										  ////////////
+			//////////////////////////////////////////////////////////////
+			$.each(eggs, function(index, obj){
+				
+				$.each(sectionsToDisplay, function(index2, obj2){
+					if (obj2.type == 'sectionTable' ) {
+						if (sectionTables[obj2.id].type == 'eggs'){
+							addToArray = []; //clear array
+							$.each(sectionTables[obj2.id].dataTable, function(index3, obj3){
+								addToArray.push(eval('obj.' + obj3))
+							});
+							sectionTables[obj2.id].dataSet.push(addToArray);
+						}
+					}
+				});
+			});
+			if (debug) console.log('Finish eggs');
 
 
-    if (debug) console.log('debug 99');
+			///////////////////////////////////////////////////////////////
+			////   Food										  ////////////
+			//////////////////////////////////////////////////////////////
+			$.each(food, function(index, obj){
+				
+				$.each(sectionsToDisplay, function(index2, obj2){
+					if (obj2.type == 'sectionTable' ) {
+						if (sectionTables[obj2.id].type == 'food'){
+							addToArray = []; //clear array
+							$.each(sectionTables[obj2.id].dataTable, function(index3, obj3){
+								addToArray.push(eval('obj.' + obj3))
+							});
+							sectionTables[obj2.id].dataSet.push(addToArray);
+						}
+					}
+				});
+			});
+			if (debug) console.log('Finish food');
+
+			///////////////////////////////////////////////////////////////
+			////   Pets										  ////////////
+			//////////////////////////////////////////////////////////////
+			$.each(pets, function(index, obj){
+				
+				$.each(sectionsToDisplay, function(index2, obj2){
+					if (obj2.type == 'sectionTable' ) {
+						if (sectionTables[obj2.id].type == 'pets'){
+							addToArray = []; //clear array
+							$.each(sectionTables[obj2.id].dataTable, function(index3, obj3){
+								addToArray.push(eval('obj.' + obj3))
+							});
+							sectionTables[obj2.id].dataSet.push(addToArray);
+						}
+					}
+				});
+			});
+			if (debug) console.log('Finish pets');
+
+			///////////////////////////////////////////////////////////////
+			////   Triad Bingo 								  ////////////
+			//////////////////////////////////////////////////////////////
+			var missingItem;
+			var requireTotal = 0;
+			$.each(triadBingoRequirement, function(index, obj){
+				missingItem = false;
+				requireTotal += obj.require;
+				
+				if (obj.type == 'egg') {
+					obj.have = eggs[obj.key].total
+					if (eggs[obj.key].total < obj.require ) {
+						missingItem = true;
+					}
+				} else if (obj.type == 'potion') {
+					obj.have = potions[obj.key].total
+					if (potions[obj.key].total < obj.require ) {
+						missingItem = true;
+					}
+				} else if (obj.type == 'food') {
+					obj.have = user.feedStats.food[obj.key]
+					if (user.feedStats.food[obj.key] < obj.require ) {
+						missingItem = true;
+					}
+				}
+				obj.missing = obj.need - obj.have
+				
+				if (missingItem) {
+					canTriadBingo = false;
+					$.each(sectionsToDisplay, function(index2, obj2){
+						if (obj2.type == 'sectionTable' ) {
+							if (sectionTables[obj2.id].type == 'triadBingoRequirement'){
+								addToArray = []; //clear array
+								$.each(sectionTables[obj2.id].dataTable, function(index3, obj3){
+									addToArray.push(eval('obj.' + obj3))
+								});
+								sectionTables[obj2.id].dataSet.push(addToArray);
+							}
+						}
+					});
+				}
+			});
+			if (requireTotal == 0) canTriadBingo = false;
+			if (debug) console.log('Finish triad bingo');
+						
+			///////////////////////////////////////////////////////////////
+			////   Action Log								 ////////////
+			//////////////////////////////////////////////////////////////
+			$.each(actionLog, function(index, obj){
+				modifyActionLog(obj)
+				
+				$.each(sectionsToDisplay, function(index2, obj2){
+					if (obj2.type == 'sectionTable' ) {
+						if (sectionTables[obj2.id].type == 'actionLog'){
+							addToArray = []; //clear array
+							$.each(sectionTables[obj2.id].dataTable, function(index3, obj3){
+								addToArray.push(eval('obj.' + obj3))
+							});
+							sectionTables[obj2.id].dataSet.push(addToArray);
+						}
+					}
+				});
+			});
+			if (debug) console.log('Finish actionLog');
+
+			if (debugShowObject) console.log(sectionTables);
+			
+		};
+		
+		//////////////////////////////////////////////////////////////////////
+		////   Formatting data for data sets     ///////////////////////////
+		//////////////////////////////////////////////////////////////////////
+		function modifyUserProperties(obj) {
+			if (user.profile !=  undefined ){
+				if (user.profile.blurb  !=  undefined ) {
+					user.blurbPretty  = renderFormattedText(user.profile.blurb)
+				} else
+				{
+					user.blurbPretty  = ''
+				}
+			} else
+			{
+				user.blurbPretty  = ''
+			};
+			if (user.id == 'system') {
+				user.profile.namePretty = 'System'
+				user.profile.nameNotPretty = 'System'
+				user.profile.nameLink = 'System'
+			} else {
+				user.profile.namePretty = renderFormattedText(user.profile.name);
+				user.profile.nameNotPretty = renderFormattedText(user.profile.name, {removeParaTags: true});
+				user.profile.nameLink = '<a href="https://habitica.com/static/front#?memberId=' + user.id +'" target="_blank">' + user.profile.nameNotPretty + '</a>'
+			}
+			if (user.stats.class == 'wizard')  {
+				user.stats.classPretty = 'mage'
+			} else {
+				user.stats.classPretty = user.stats.class
+			}
+			user.inbox.canPM = !user.inbox.optOut;
+			user.creation  = reformatDate(user.auth.timestamps.created);
+			var nextBirthday = moment({
+											year: moment().year(),
+											month: moment(user.auth.timestamps.created).month(),
+											day: moment(user.auth.timestamps.created).date(),
+											hour: moment(user.auth.timestamps.created).hour(),
+											minute: moment(user.auth.timestamps.created).minute(),
+											second: moment(user.auth.timestamps.created).second()
+										})
+			if (moment() > nextBirthday) nextBirthday = moment({
+											year: moment().year()+1,
+											month: moment(user.auth.timestamps.created).month(),
+											day: moment(user.auth.timestamps.created).date(),
+											hour: moment(user.auth.timestamps.created).hour(),
+											minute: moment(user.auth.timestamps.created).minute(),
+											second: moment(user.auth.timestamps.created).second()
+										})
+			
+			user.creation.nextBirthday =  reformatDate(nextBirthday)
+			
+			
+			user.lastLoggedIn  = reformatDate(user.auth.timestamps.loggedin);
+			user.lastDropItem  = reformatDate(user.items.lastDrop.date);
+			//if (debugShowObject) console.log(obj);
+			if (user.contributor  !=  undefined ) {
+				if (user.contributor.text  !=  undefined ) {
+					user.contribPretty = [];
+					user.contribPretty.text = user.contributor.text;
+					if (user.contributor.level != undefined)	{
+						user.contribPretty.level = user.contributor.level
+					} else {
+						user.contribPretty.level = '';
+					};
+					if (user.contributor.contributions  !=  undefined){
+						user.contribPretty.contributions = user.contributor.contributions;
+					} else {
+						user.contribPretty.contributions = '';
+					}
+					if (user.contributor.admin === true) {
+						user.contribPretty.admin = true
+					} else {
+						user.contribPretty.admin  = false
+					}
+				} else {
+					user.contribPretty = [];
+					user.contribPretty.text = '';
+					user.contribPretty.level = '';
+					user.contribPretty.contributions = '';
+					user.contribPretty.admin = false;
+				}
+			} else {
+				user.contribPretty = [];
+				user.contribPretty.text = '';
+				user.contribPretty.level = '';
+				user.contribPretty.contributions = '';
+				user.contribPretty.admin = false;
+			}
+			
+		}
+		
+		function modifyActionLog(obj) {
+			obj.creation  = reformatDate(obj.epoch);
+		}
+		
+		function reformatDate(dateString) {
+				var formattedDate = myDateConverter(dateString, 'long');
+				var shortDate     = myDateConverter(dateString, 'short');
+				var relativeTime  = myDateConverter(dateString, 'relativeTime');
+				var utcTime  = myDateConverter(dateString, 'utcTime');
+				return { 'dateAndTime': formattedDate,
+						 'shortDate': shortDate,
+						 'relativeTime': relativeTime,
+						 'utcTime': utcTime
+				};
+		}
+		
+		
+		//////////////////////////////////////////////////////////////////////
+		////   Sections 										   ////////////
+		//////////////////////////////////////////////////////////////////////
+		//Custom Section functions here.
+
+		//////////////////////////////////////////////////////////////////////
+		//sectionTable Functions
+		//////////////////////////////////////////////////////////////////////
+		function formatTableSection(sectionId, title){
+			var id    = sectionId + 'Section';
+			var orderId = sectionId;
+			var tableSectionId = sectionId + 'display';
+			var subTitle = sectionTables[sectionId].subTitle()
+			var refreshId = sectionId + SECTIONREFRESH 
+			var html = formatTableData(subTitle, refreshId, tableSectionId);
+			if (! html) {
+				return;
+			}
+			TOC[orderId] = {'target': id, 'title':  title};
+			MAIN[orderId] = {'id': id, 'title': title, 'longContent': true,
+				'html': html, 'refreshHtml': subTitle, 'refreshId': refreshId,
+				'dataSetTblSection': tableSectionId, 'function': constructTable, 
+				'functionPar':  [sectionId, sectionTables[sectionId].dataSet, sectionTables[sectionId].dataSetHeader, tableSectionId]};
+		}
+		
+		
+		//Function used by sections to create HTML To display table
+		function formatTableData(subText, refreshId, tableId) {
+			//Used by sections above if a table is required in there HTML
+			var html = '';
+			
+			html += '<table id="' + tableId + '" class="display" width="100%"></table>'
+
+			if (html) {
+				return '<span id="' + refreshId + '">' + subText + '</span><p><div id="headerExport"></div></p>' + html ;
+			}
+			else {
+				return '';
+			}
+		}
+
+	}
+	
+}
+
+
+if (debug) console.log('debug 99');	
 });
+</script>	
+
+
+<style>
+
+/*********************************************************************
+****   Page-wide   ***************************************************
+*********************************************************************/
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    background-color: rgb(173, 208, 215);
+}
 
 
 
+#innerBody {
+    margin: 20px;
+    padding: 5px 20px 30px 20px;
+    background-color: rgb(242, 242, 230);
+}
+#loading {
+    margin-right: 30px;
+    margin-left: 30px;
+    color: orange;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+#loading ul {
+    font-size: 0.8em;
+}
+#loading ul a {
+    color: orange;
+}
 
 
-</script>
- 
+#posting {
+    margin-right: 30px;
+    margin-left: 30px;
+    color: orange;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+#posting ul {
+    font-size: 0.8em;
+}
+#posting ul a {
+    color: orange;
+}
+
+.narrowContent {      /* The data should be as wide as the user's window   */
+    max-width: 500px; /* but some explanatory paragraphs should be narrow. */
+}
+
+
+hr {
+    width: 95%;
+}
+hr.padded {
+    margin-top:    1em;
+    margin-bottom: 2em;
+}
+
+.show {
+    display: block;
+}
+.hide {
+    display: none;
+}
+.clear {
+    clear: both;
+}
+
+.spoiler {
+    font-weight: bold;
+	font-size: 250%;
+	color: orange;
+}
+.subheading {
+    font-weight: bold;
+}
+.highlight {
+    font-weight: bold;
+}
+.lowlight { /* like highlight but less so */
+    font-style: italic;
+}
+.explanation {
+    font-style: italic;
+}
+abbr {
+    border-bottom: 1px dashed black;
+}
+img.emoji {
+    margin-bottom: -0.25em;
+}
+.forCopyPaste {
+    /* used to add blank lines that we want when copying text to clipboard,
+       but we don't want to see extra whitespace on the screen */
+    margin-top: -1em;
+}
+ul.padded > li {
+    padding: 3px 0;
+}
+
+.neutral {
+    background-color: #fffbd0; /* yellow */
+}
+.danger {
+    background-color: #ffcccc; /* red */
+    /* background-color: #F5A9A9; */ /* darker red */
+}
+.safe {
+    background-color: #bdd8fc; /* blue */
+    /* green+red and green+yellow are not good for colour-blind people */
+}
+
+
+/*********************************************************************
+****   Page-wide Data Tables   ********************************
+*********************************************************************/
+
+a.dt-button.hatchPetButton {
+	color: orange;
+}
+
+a.dt-button.manualFeedPetButton {
+	color: orange;
+}
+
+a.dt-button.feedPetButton {
+	color: orange;
+}
+
+
+div.dt-button-collection {
+	width: 180px;
+}
+
+/*********************************************************************
+****   Page-wide Show/Hide Toggling   ********************************
+*********************************************************************/
+.mainSectionClose,
+.showHideToggle,     /* for toggling by id */
+.showHideToggleClass /* for toggling by class */
+{
+    cursor: pointer;
+    text-decoration: underline;
+    color: purple;
+}
+.closer { /* as in "a thing that closes", not "nearer" */
+    margin-top: 30px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+}
+.closer:hover {
+    border: 1px dashed lightgrey;
+}
+.developerData {
+    font-family: monospace;
+}
+
+
+/*********************************************************************
+****   Header   ******************************************************
+*********************************************************************/
+h1 {
+    float: left;
+}
+h1>a:first-child { /* "Habitica" link in header */
+    color: black;
+    text-decoration: none;
+}
+h1>a:first-child:hover { /* "Habitica" link in header */
+    text-decoration: underline;
+}
+h1 span {
+    font-size: 0.5em;
+}
+h2 {
+    margin-top: 30px;
+}
+
+#headerExtras .showHideToggle {
+    white-space: nowrap;
+}
+#userNameDisplay {
+    text-align: right;
+    font-weight: bold;
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+#groupNameDisplay {
+    text-align: left;
+    font-weight: bold;
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+#explanationAndClearLinks {
+    text-align: right;
+}
+#explanationAndClearLinks span {
+    padding-left: 10px;
+}
+
+
+/*********************************************************************
+****   Version History   *********************************************
+*********************************************************************/
+
+#versionChanges dl {
+    margin-left: 30px;
+}
+#versionChanges dl dt {
+    font-size: 1.15em;
+    font-weight: bold;
+}
+#versionChanges dl dt .date {
+    padding-left: 10px;
+    font-size: 0.8em;
+    font-weight: normal;
+}
+#versionChanges .showHideToggle {
+    padding-bottom: 15px;
+    margin-bottom: 10px;
+}
+
+/*********************************************************************
+****   API Form and Documentation   **********************************
+*********************************************************************/
+
+#documentationAndForm > div {
+    max-width: 770px;
+}
+#documentationAndForm #documentationAndFormClose {
+    display: none;
+    max-width: 100%;
+}
+#documentationAndForm div h2 {
+    font-size: 1.3em;
+}
+#documentationAndForm li {
+    margin-bottom: 10px;
+}
+
+#userApiDetailsForm {
+    margin: 30px;
+}
+#userApiDetailsForm fieldset {
+    max-width: 40em;
+}
+#userApiDetailsForm fieldset label,
+#userApiDetailsForm fieldset input[type="submit"] {
+    display: block;
+    float: left;
+    clear: left;
+    margin: 9px 0;
+}
+#userApiDetailsForm fieldset input[type="button"] {
+    display: block;
+    float: left;
+    clear: left;
+    margin: 9px 0;
+}
+#userApiDetailsForm fieldset label span {
+    display: block;
+    float: left;
+    width: 11em;
+}
+#userApiDetailsForm fieldset label input {
+    float: left;
+    width: 30em;
+}
+#userApiDetailsForm fieldset p {
+    clear: both;
+}
+#userApiDetailsForm legend .highlight {
+    font-size: 1.3em;
+}
+#userApiDetailsForm fieldset li {
+    margin-bottom: 7px;
+}
+
+
+
+/*********************************************************************
+****   Dashboard   ***************************************************
+*********************************************************************/
+#DASHBOARD ul {
+    float: left;
+}
+#DASHBOARD li {
+    text-align: center;
+    width: 120px;
+    background-color: #fffbd0; /* yellow */
+    border: 1px;
+    padding: 4px;
+    margin-right: 4px;
+    float: left;
+    list-style-type: none;
+}
+#DASHBOARD li.showHideToggle {
+    text-decoration: none;
+    color: black;
+}
+#DASHBOARD li > div {
+    box-shadow: 1px 1px 1px 1px #666666;
+}
+#DASHBOARD .value {
+    font-size: 2.15em;
+    font-weight: bold;
+    padding: 2px;
+}
+#DASHBOARD .label {
+    font-size: 0.75em;
+    padding: 1px;
+}
+#DASHBOARD .dropCap {
+    font-size: 0.7em;
+}
+
+
+/*********************************************************************
+****   Table Of Contents   *******************************************
+*********************************************************************/
+ul#tableOfContents {
+    list-style-type: none;
+}
+ul#tableOfContents ul {
+    list-style-type: none;
+    margin-left: 1em;
+    padding: 0;
+}
+ul#tableOfContents li {
+    font-size: 1.1em;
+    padding: 2px 0;
+}
+ul#tableOfContents > li {
+    float: left;
+    margin-right: 20px;
+}
+
+
+/*********************************************************************
+****   Specific Sections   *******************************************
+*********************************************************************/
+#MAIN > * {
+    display: none; // all sections hidden by default
+}
+
+#overviewSection h1 {
+	 float: none
+}
+
+#overviewSection table tr td {
+    border: 2px solid lightgrey;
+	text-align: center;
+	padding: 5px;
+}
+</style>
 </head>
-<body>
-	<div id="headerExtras"></div>
-	<p>THIS IS A ALPHA VERISON. NOT TO USED BY PUBLIC</p>
-	<table id="dataToDisplayTable" class="display" width="100%"></table>
-	<table id="table2" class="display" width="100%"></table>
+<body><div id="innerBody">	
+<h1>BETA <a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v0.1)</span></h1><!-- VERSION TOGGLE -->
+<div id="headerExtras"></div>
+<hr class="clear" />
+<div id="headerGroupExtras"></div>
+<hr class="clear" />
+
+
+<div id="loading">
+    <div class="good hide">
+        <p>Please wait. Fetching data from
+        <span id="serverName">Habitica</span>... <span id="statusFetch"></span></p>
+    </div>
+    <div class="bad hide">
+        <p>There was an error obtaining your data.</p>
+        <ul class="padded">
+			<li>Check your group id is either "party" or Guild Id which is a string of characters similar to your UID. The Guild ID appears at the end of the URL. Eg. 2ff9822b-27f2-4774-98da-db349b57a38e</li>
+            <li>Please reload the page and then check that your <a href="https://habitica.com/#/options/settings/api">User ID and API Token</a> are correct.</li>
+            <li>If you're using Internet Explorer, try another browser. <a href="https://www.google.com/intl/en/chrome/browser/">Chrome</a> or <a href="https://www.mozilla.org/en-US/firefox/new/">Firefox</a> will be more reliable.</li>
+            <li>If the page's URL starts with "http://" change it to start with "https://" (or just use <a href="https://oldgods.net/habitica/cTheDragons/feed.html">this correct link</a>).</li>
+            <li>If neither of those help, contact me! See <strong>"Help and Contact Details"</strong> at the bottom of this page.</li>
+        </ul>
+    </div>
+</div>
+<div id="posting">
+	<div class="good hide">
+		<p>Please wait. Posting data to
+		<span id="serverName">Habitica</span>... <span id="statusPost"></span></p>
+	</div>
+</div>
+
+<div id="versionChanges" class="hide"><!-- VERSION SECTION -->
+    <h2>Version History</h2>
+    <dl>
+        <dt>0.1 - beta release <span class="date">2016-11-02</span></dt>
+        <dd><ul>
+            <li>Features:
+                <ul>
+                    <li class="subheading">Pets Section</li>
+					<li class="subheading">Triad Bingo Section</li>
+					<li class="subheading">Activity Log Section</li>
+					<li class="subheading">Eggs Section</li>
+					<li class="subheading">Potion Section</li>
+					<li>Bulk feeding pets selected with food desired</li>
+					<li>Bulk hatching pets</li>
+					<li>Manually feeding pets with food</li>
+					<li>Completing Triad Bingo with one button</li>
+                </ul>
+            </li>
+            <li>Documentation:
+                <ul>
+                    <li>Spoiler Note</li>
+					<li>Privacy and security notes (also related comments within the code)</li>
+                    <li>What's On This Page? (descriptions of each feature)</li>
+                    <li>Possible Future Features</li>
+                    <li>Suspected Bugs (no support for old browsers; mobile support unknown)</li>
+                    <li>Help and Contact Details</li>
+                </ul>
+            </li>
+        </ul></dd>
+    </dl>
+    <div class="showHideToggle closer" data-target="versionChanges" data-scrolltotop="true">close version history <span class="lowlight">(or click the version number again to close)</span></div>
+    <hr />
+</div><!-- end of div id="versionChanges" -->
+
+
+<div id="DASHBOARD"></div>
+<div id="TOC"></div>
+<div id="MAIN"></div>
+
+<div id="documentationAndForm">
+   <p>This page shows you certain information from your <a
+   href="https://habitica.com/">Habitica</a> account. You can read the
+   full list below, or just enter your details and try it out.</p>
+
+   <p class="spoiler">SPOILERS AHEAD!!!<br />
+   This site contains spoiler information for pets & food etc.<br />
+   Please do not use if you are new to Habitica.</p>
+  
+   
+    <iframe src="js/null.htm" id="formPasswdSaveFix" name="formPasswdSaveFix" style="display:none"></iframe><!-- DAMN YOU CHROME!! DAMN YOU!!!! http://stackoverflow.com/a/9116737 -->
+    <form id="userApiDetailsForm" method="POST" action="" target="formPasswdSaveFix">
+        <fieldset>
+            <legend><span class="highlight">Enter your Habitica API details</span>
+            (from the <a href="https://habitica.com/#/options/settings/api">Settings
+             -&gt; API page</a>)
+            </legend>
+            <label for="userId"><span>User ID</span>
+                <input type="text" name="userId" id="userId"/>
+            </label>
+            <label for="apiToken"><span>API Token</span>
+                <input type="password" name="apiToken" id="apiToken"/>
+            </label>
+			<div id="exportOptionSelector"></div>
+            <input class="div-fetchData" type="submit" value="Fetch Pet Data" />
+			<div id="exportOptionDesc"></div>
+            <p class="highlight">Privacy and security notes:</p>
+            <ul>
+            <!--<li>If you access this page from the Data menu on the Habitica
+            website, your User ID will be automatically added to the form
+            above.</li> $$$ Maybe one day when the tool that good--->
+            <li>Your API Token is a password - do not share it with anyone,
+            not even the maintainer of this page if you are seeking help.</li>
+            <li>When you enter your User ID and API Token here and click
+            "Fetch My Data", your ID and Token are sent to Habitica's servers.
+            They are not sent anywhere else.
+            To confirm that, you can ask someone who knows the JavaScript
+            programming language to examine the source of this page.</li>
+            <li>This page does not save your User ID and API Token to any
+            location, but your browser might, if it has been configured to
+            save form and password information. If you are using this page
+            on a shared computer, you should clear any data that the browser
+            has saved.</li>
+            <li>You cannot view anyone else's private data by using this page.</li>
+            <li>To clear your data, reload the page.</li>
+            </ul>
+        </fieldset>
+    </form>
+
+
+    <div>
+		<h2>What's On This Page?</h2>
+		<ul>
+			<div id="sectionDesc"></div>
+		</ul>		
+		<h2>Possible Future Features</h2>
+		<ul>
+			<li><span class="subheading">Other Stuff?</span>: Send me ideas! Contact details are below.</li>
+		</ul>
+
+		<h2>Known Bugs</h2>
+		<p>The hiding and closing of sections is a bit funky. (One day I will fix it but not today.)</p>
+
+		<p>Internet Explorer will produce odd results if you use the "Re-Fetch Data" button. Reloading the page will fix the problem. Avoid using that button. Avoiding Internet Explorer will also work.</p>
+		<p>This page will not work correctly on old browsers because it uses modern website features and relies on compliance to standards (both can be lacking in old browsers). <a href="http://browsehappy.com/">Updating your browser is important for general safety on the Internet!</a> If you have upgraded your browser to the latest version and are still having problems, please tell me! Contact details are below.</p>
+		<p>Regardless of what bugs there might be, the only changes that could result in any changes being made on your Habitica account are with Pets, Mounts, Food, Potions and Eggs.</p>
+
+		<h2>Thank You!</h2>
+		<p>Thank you to @Alys & Ryan for their code which this is based. Thank you to the brave and mighty testers in the <a href="https://habitica.com/#/options/groups/guilds/d9a0ec1e-352b-4697-a5d5-fb45c98fb4a3">Testing & Bug Squashing for Dragon Tools</a>; your willingness to dive into the murky waters of beta testing makes these tools better.<p> 
+
+		<h2>Help and Contact Details</h2>
+		<p>This page has been created by <a href="http://habitica.wikia.com/wiki/User:CTheDragons">cTheDragons</a>. If you have questions, problems, or suggestions, you're welcome to contact me, although I cannot guarantee that I'll always be able to spend a lot of time on this. You can contact me at <a href="https://habitica.com/#/options/groups/guilds/d9a0ec1e-352b-4697-a5d5-fb45c98fb4a3">Testing & Bug Squashing for Dragon Tools</a>. I tend to ignore emails & PMs.</p>
+		<p>Code can be source at  <a href="https://github.com/cTheDragons/Habitica-Bulk-Feed">Github<a>. Contributions are welcome. As already stated, any issues please report to  <a href="https://habitica.com/#/options/groups/guilds/d9a0ec1e-352b-4697-a5d5-fb45c98fb4a3">Testing & Bug Squashing for Dragon Tools</a> for a faster response and to avoid duplication. </p>
+		<p>If you have general questions about Habitica, post them to <a href="https://habitica.com/#/options/groups/tavern">Tavern</a> or <a href="https://habitica.com/#/options/groups/guilds/5481ccf3-5d2d-48a9-a871-70a7380cee5a">Habitica Help: Ask a Question Guild</a>.</p>
+    </div>
+	
+	<div id="documentationAndFormClose" class="showHideToggle closer" data-target="documentationAndForm" data-resettoggletext="documentationAndFormToggle">hide documentation / options</div>
+	
+</div><!-- end of div id="documentationAndForm" -->
+	
+</div><!-- end of div id="innerBody" -->
 </body>
 </html>
