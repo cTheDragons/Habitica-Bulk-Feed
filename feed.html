@@ -55,6 +55,7 @@ var pets;	  // holds all pets
 var eggs;	  // holds all eggs
 var potions;	  // holds all potions
 var food;	  // holds all food
+var sellItems; //holds all items to sell
 var actionLog; 		//log that holds all the data from feeding/hatching pets
 var triadBingoRequirement; //holds the requirements for Triad Bingo
 var canTriadBingo;
@@ -102,10 +103,11 @@ var sectionsToDisplay = [
 	{type: 'heading', id: 'headingGroup01', title: 'Action', showOnly: [], description: ''},
 		{type: 'sectionTable', id: 'pets', title: 'Pets', showOnly: [], description: 'Shows the status of your pets. This section will allow you to bulk hatch, bulk feed your pets a specific food or bulk feed with ideal food. The table allows for multiple select so you can do this for more than one pet at once.'},
 		{type: 'sectionTable', id: 'triadBingoRequirement', title: 'Triad Bingo', showOnly: [], description: 'Either allows you to hatch all items for Triad Bingo or show which items are missing.'},
-		{type: 'sectionTable', id: 'actionLog', title: 'Activity Log', showOnly: [], description: 'Lists all actions and reponses from Bulk Feeding the pets through the tools.'},
+		{type: 'sectionTable', id: 'sellItems', title: 'Sell Items', showOnly: [], description: 'Allows you to sell food, eggs or hatching potions.'},
 	{type: 'heading', id: 'headingGroup2', title: 'Analyze', showOnly: [], description: ''},
 		{type: 'sectionTable', id: 'eggs', title: 'By Egg Type', showOnly: [], description: 'Lists all eggs and counts of pet & mounts.'},
-		{type: 'sectionTable', id: 'potions', title: 'By Potion Type', showOnly: [], description: 'Lists all potions and counts of pet & mounts.'}
+		{type: 'sectionTable', id: 'potions', title: 'By Potion Type', showOnly: [], description: 'Lists all potions and counts of pet & mounts.'},
+		{type: 'sectionTable', id: 'actionLog', title: 'Activity Log', showOnly: [], description: 'Lists all actions and reponses from Bulk Feeding the pets through the tools.'}
 	
 ]
 
@@ -115,18 +117,18 @@ var sectionTables =	{}
 sectionTables['pets'] = {
 	type: 'pets',
 	dataSet: [], 
-	dataSetHeader: ['Key', 'Name',  'Type', 'Potion Name', 'Egg Name', 'Can Hatch?', 'Has Pet?', 'Has Mount?',  'Feed Bar', 'Ideal Food Avail'], 
-	dataTable: ['key', 'text', 'type', 'potionPretty', 'eggPretty', 'canHatch', 'pet',  'mount', 'feedValue', 'foodAvail'],
-	babyBear: {show: [1,6,7,8,9], orderBy: [[1, 'asc']]},
-	mamaBear: {show: [1,2,5,6,7,8,9], orderBy: [[1, 'asc']]},
-	papaBear: {show: [1,2,3,4,5,6,7,8,9], orderBy: [[1, 'asc']]},
-	extraColumnDefs: [{'className': 'dt-center', 'targets': [5,6,7,8]},{'className': 'dt-right', 'targets': [8,9]}],
+	dataSetHeader: ['', 'Key', 'Name',  'Type', 'Potion Name', 'Egg Name', 'Can Hatch?', 'Has Pet?', 'Has Mount?',  'Feed Bar', 'Ideal Food Avail'], 
+	dataTable: ['imgTag', 'key', 'text', 'typePretty', 'potionPretty', 'eggPretty', 'canHatch', 'pet',  'mount', 'feedValue', 'foodAvail'],
+	babyBear: {show: [2,7,8,9,10], orderBy: [[2, 'asc']]},
+	mamaBear: {show: [2,3,6,7,8,9,10], orderBy: [[2, 'asc']]},
+	papaBear: {show: [0,2,3,4,5,6,7,8,9,10], orderBy: [[2, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-center', 'targets': [6,7,8,9]},{'className': 'dt-right', 'targets': [10]}],
 	subTitle: function (){
 		var html = selectionHeadingMultiSelect()
 		return html 		
 	},
-	petKeyIndex: 0,
-	petNameIndex: 1,
+	petKeyIndex: 1,
+	petNameIndex: 2,
 	extraButton: function(){
 		var returnButton = []
 		var manualFeedPetButton = []
@@ -184,22 +186,24 @@ sectionTables['pets'] = {
 		return returnButton
 	}
 }
+
 sectionTables['triadBingoRequirement'] = {
 	type: 'triadBingoRequirement',
 	dataSet: [], 
-	dataSetHeader: ['Type', 'Name', 'Require', 'Have', 'Missing'], 
-	dataTable: ['type', 'text', 'need', 'have', 'missing'],
-	babyBear: {show: [0,3], orderBy: [[1, 'decsc']]},
-	mamaBear: {show: [0,2,3], orderBy: [[1, 'desc']]},
-	papaBear: {show: ['all'], orderBy: [[1, 'desc']]},
-	extraColumnDefs: [{'className': 'dt-right', 'targets': [2,3,4]}],
+	dataSetHeader: ['', 'Category', 'Name', 'Require', 'Have', 'Missing'], 
+	dataTable: ['imgTag', 'category', 'text', 'need', 'have', 'missing'],
+	babyBear: {show: [1,4], orderBy: [[1, 'asc'],[2, 'asc']]},
+	mamaBear: {show: [1,3,4], orderBy: [[1, 'asc'],[2, 'asc']]},
+	papaBear: {show: ['all'], orderBy: [[1, 'asc'],[2, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-right', 'targets': [3,4,5]}],
 	subTitle: function (){
 		var html = ''
 		if (canTriadBingo) {
 			html += '<p>You have all items required! Hatch and feed all for Triad Bingo?</p>'
 			html += '<p><input class="div-triadBingo" id="triadBingo" type="submit" value="Yes! Hatch and Feed all for Triad Bingo" /></p>'
 		} else if (sectionTables['triadBingoRequirement'].dataSet.length > 0) {
-			html += '<p>Listed below are the items missing to complete Triad Bingo.</p>'
+			html += '<p>Listed below are the items missing to complete Triad Bingo. Keep collecting! Once collected return here to bulk hatch and feed.</p>'
+			html += '<p><input class="div-triadBingo" id="triadBingo" type="submit" value="I cannot wait! Hatch and feed my Base (Gen 1) pets as much as possible." /></p>'
 		} else {
 			html += '<p>You have Triad Bingo!</p>'
 		}
@@ -208,30 +212,65 @@ sectionTables['triadBingoRequirement'] = {
 	}
 }
 
-sectionTables['actionLog'] = {
-	type: 'actionLog',
+sectionTables['sellItems'] = {
+	type: 'sellItems',
 	dataSet: [], 
-	dataSetHeader: ['Date', 'Epoch', 'ActionId',  'Response?', 'Message'], 
-	dataTable: ['creation.shortDate', 'epoch', 'actionLogId', 'response', 'message'],
-	babyBear: {show: [0,3], orderBy: [[1, 'decsc'],[3, 'asc']]},
-	mamaBear: {show: [0,2,3], orderBy: [[1, 'desc'],[3, 'asc']]},
-	papaBear: {show: ['all'], orderBy: [[1, 'desc'],[3, 'asc']]},
-	extraColumnDefs: [{'className': 'dt-center', 'targets': [0,3]},{'className': 'dt-right', 'targets': [1]}],
+	dataSetHeader: ['', 'Key', 'Category', 'Name',  'Type', 'Description', 'Gold Value', 'Total'], 
+	dataTable: ['imgTag', 'key', 'category', 'text', 'type', 'note', 'value', 'total'],
+	babyBear: {show: [2,3,7], orderBy: [[2, 'asc'],[3, 'asc']]},
+	mamaBear: {show: [2,3,6,7], orderBy: [[2, 'asc'],[3, 'asc']]},
+	papaBear: {show: [0,2,3,4,5,6,7], orderBy: [[2, 'asc'],[3, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-right', 'targets': [6,7]}],
 	subTitle: function (){
-		var html = 'Log will clear once html page is refreshed or "Fetch Pet Data" Button in show documentation/options again area.'
+		var html = selectionHeadingMultiSelect()
 		return html 		
+	},
+	itemKeyIndex: 1,
+	itemCatIndex: 2,
+	itemNameIndex: 3,
+	extraButton: function(){
+		var returnButton = []
+		var sellButton = []
+		var singleButton = []
+		var arrayOfButton = [{text: 'Sell X Times', sellAction: 5},{text: 'Sell Till X Left', sellAction: -5},{text: 'Sell All', sellAction: 0}]
+		
+		$.each(arrayOfButton, function(index, obj){
+			singleButton = {
+				text: obj.text,
+				action: function ( e, dt, node, config ) {
+					var rowData = sectionTables['sellItems'].table.rows( { selected: true } ).data().toArray();
+					var itemKeyIndex = sectionTables['sellItems'].itemKeyIndex;
+					var itemCatIndex = sectionTables['sellItems'].itemCatIndex;
+					var itemNameIndex = sectionTables['sellItems'].itemNameIndex;
+					postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, obj.sellAction, false, -1)	
+				}
+			}
+			sellButton.push(singleButton)
+		});
+		
+		returnButton = []
+		returnButton.push({
+				extend: 'collection',
+				text: 'Sell',
+				buttons: sellButton,
+				autoClose: true,
+				className: 'sellButton'		
+		})			
+					
+			
+		return returnButton
 	}
 }
 
 sectionTables['eggs'] = {
 	type: 'eggs',
 	dataSet: [], 
-	dataSetHeader: ['Key', 'Name', 'Type', 'Egg Count', 'Not Hatched',  'Pets To Feed', 'Mounts', 'ReGen Pets'], 
-	dataTable: ['key', 'text', 'feedStats.type', 'total', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount'],
-	babyBear: {show: [0,3], orderBy: [[1, 'asc']]},
-	mamaBear: {show: [0,2,3], orderBy: [[1, 'asc']]},
-	papaBear: {show: [1,2,3,4,5,6,7], orderBy: [[1, 'asc']]},
-	extraColumnDefs: [{'className': 'dt-right', 'targets': [3,4,5,6,7]}],
+	dataSetHeader: ['', 'Key', 'Name', 'Type', 'Egg Count', 'Not Hatched',  'Pets To Feed', 'Mounts', 'ReGen Pets'], 
+	dataTable: ['imgTag', 'key', 'text', 'feedStats.type', 'total', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount'],
+	babyBear: {show: [2,4], orderBy: [[2, 'asc']]},
+	mamaBear: {show: [2,3,4], orderBy: [[2, 'asc']]},
+	papaBear: {show: [0,2,3,4,5,6,7,8], orderBy: [[2, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-right', 'targets': [4,5,6,7,8]}],
 	subTitle: function (){
 		var html = ''
 		html += 'Magic Potion Pets are not included in the counts. Please see <span class="showHideToggle" data-target="potionsSection" data-closemainsections="true">Analyze By Potion Section</span> for counts of these pets.'
@@ -243,14 +282,29 @@ sectionTables['eggs'] = {
 sectionTables['potions'] = {
 	type: 'potions',
 	dataSet: [], 
-	dataSetHeader: ['Key', 'Name', 'Magic Potion?', 'Potion Count', 'Food Available', 'Not Hatched', 'Pets To Feed', 'Mounts', 'ReGen Pets'], 
-	dataTable: ['key', 'text', 'premium', 'total', 'foodAvail', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount'],
-	babyBear: {show: [0,3], orderBy: [[1, 'asc']]},
-	mamaBear: {show: [0,2,3], orderBy: [[1, 'asc']]},
-	papaBear: {show: [1,2,3,4,5,6,7,8], orderBy: [[1, 'asc']]},
-	extraColumnDefs: [{'className': 'dt-center', 'targets': [2]}, {'className': 'dt-right', 'targets': [3,4,5,6,7,8]}],
+	dataSetHeader: ['', 'Key', 'Name', 'Magic Potion?', 'Potion Count', 'Food Available', 'Not Hatched', 'Pets To Feed', 'Mounts', 'ReGen Pets'], 
+	dataTable: ['imgTag', 'key', 'text', 'premium', 'total', 'foodAvail', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount'],
+	babyBear: {show: [2,4], orderBy: [[2, 'asc']]},
+	mamaBear: {show: [0,2,3,4], orderBy: [[2, 'asc']]},
+	papaBear: {show: [0,2,3,4,5,6,7,8,9], orderBy: [[2, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-center', 'targets': [3]}, {'className': 'dt-right', 'targets': [4,5,6,7,8,9]}],
 	subTitle: function (){
 		var html = ''
+		return html 		
+	}
+}
+
+sectionTables['actionLog'] = {
+	type: 'actionLog',
+	dataSet: [], 
+	dataSetHeader: ['Date', 'Epoch', 'ActionId',  'Response?', 'Message'], 
+	dataTable: ['creation.shortDate', 'epoch', 'actionLogId', 'response', 'message'],
+	babyBear: {show: [0,3], orderBy: [[1, 'desc'],[3, 'asc']]},
+	mamaBear: {show: [0,2,3], orderBy: [[1, 'desc'],[3, 'asc']]},
+	papaBear: {show: ['all'], orderBy: [[1, 'desc'],[3, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-center', 'targets': [0,3]},{'className': 'dt-right', 'targets': [1]}],
+	subTitle: function (){
+		var html = 'Log will clear once html page is refreshed or "Fetch Pet Data" Button in show documentation/options again area.'
 		return html 		
 	}
 }
@@ -296,12 +350,18 @@ var serverPathContent			= '/content?language=en';
 var serverPathUser				= '/user';
 var serverPathFeedPet			= '/user/feed'
 var serverPathHatchPet			= '/user/hatch/'
+var serverPathSellItem			= '/user/sell/'
 var imageURL					= 'https://habitica-assets.s3.amazonaws.com/mobileApp/images/' 
 var imageShopPrefix             =  'shop_'
+var imageStableFood             =  'Pet_Food_'
+var imageStableEgg	            =  'Pet_Egg_'
+var imageStablePotion           =  'Pet_HatchingPotion_'
+var imageStablePet		        =  'Pet-'
 var imageFileSuffix				= '.png'
 
 var userId						= '';
 var apiToken					= '';
+var showImage					= false;
 var exportOption 			 	= 'papaBear';
 var exportFormat			 	= 1;
 var debug						= false;
@@ -448,6 +508,7 @@ if (debug) console.log('debug enableShowHideToggling');
 var url_vars = getUrlVars();
 if (url_vars.uuid) {
     $("#userId").val(url_vars.uuid);
+	$("#showImage").val(url_vars.image);
 }
 function getUrlVars() {
     // Function found at http://stackoverflow.com/questions/4656843/jquery-get-querystring-from-url#answer-4656873
@@ -472,6 +533,7 @@ if (debug) console.log('debug #userApiDetailsForm (Fetch Data)');
 	/* The user manually submitted the API connection form. */
     userId   = $('#userId').val();
     apiToken = $('#apiToken').val();
+	showImage = $('#showImage')[0].checked;
 //	exportOption = $('#exportOption').val()
 //   exportFormat = $('#exportFormat').val()
 	actionLog = []
@@ -799,23 +861,24 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		
 		//Find Food to use
 		foodKey = ''
-		if (foodKeyIndex = -1) {
-			$.each(food, function(index2, obj2){
-				if (obj2.total > 0 ) {
-					if (pets[obj[petKeyIndex]].type == 'premium') {
-						foodKey = index2
-					} else {
-						if (pets[obj[petKeyIndex]].potion == obj2.target) foodKey = index2
+		if (pets[obj[petKeyIndex]].feedValue > 0) {
+			if (foodKeyIndex = -1) {
+				$.each(food, function(index2, obj2){
+					if (obj2.total > 0 ) {
+						if (pets[obj[petKeyIndex]].type == 'premium') {
+							foodKey = index2
+						} else {
+							if (pets[obj[petKeyIndex]].potion == obj2.target) foodKey = index2
+						}
 					}
+					
+				});
+			} else {
+				if (food[obj[foodKeyIndex]].total > 0 ) {
+					foodKey = obj[foodKeyIndex]
 				}
-				
-			});
-		} else {
-			if (food[obj[foodKeyIndex]].total > 0 ) {
-				foodKey = obj[foodKeyIndex]
 			}
 		}
-		
 		
 		if (foodKey != '') {
 			food[foodKey].total-- //remove one item away
@@ -965,7 +1028,10 @@ function triadBingoHatchFeedPet() {
 	multiStepArray = []
 	multiStep = 0
 	
-	if (confirm('Hatch eggs and feed pets to complete Triad Bingo?')) {
+	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?'
+	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Base (Gen 1) pets as much as possible?' 
+	
+	if (confirm(confirmMsg)) {
 
 	
 		$.each(pets, function(index, obj){
@@ -1001,13 +1067,170 @@ function triadBingoHatchFeedPet() {
 	}
 }
 
+function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAction, noPromptToFeed, multiStep) {
+	if (debug) console.log('debug postSellItem start');
+	var urlToPost = ''	
+	var sellItemList = ''
+	var index = 0
+	var foodKey 
+	var loopList = []
+	var sellAmount = Math.abs(sellAction)
+	var sellAmountUrl = 1
+	var proceed = noPromptToFeed
+
+	var actionLogId = 'SellItem'
+	var itemCode = {egg: 'eggs', potion: 'hatchingPotions', food: 'food'}
+	
+	
+	if (rowData.length == 0){
+		if (debug) console.log('debug no users to remove');
+		alert('No row selected.\nPlease select a row before trying again.');
+		return;
+	
+	} else {
+		if (debugShowObject) console.log( rowData );
+		
+		//get UniqueRows
+		for(var i = 0; i < rowData.length; i++) {
+			//Check if can feed pet first
+			notInLoop = true
+			
+			for(var j = 0; j < loopList.length; j++) {
+				if (rowData[i][itemCatIndex] + '_' + rowData[i][itemKeyIndex] == loopList[j][itemCatIndex] + '_' + loopList[j][itemKeyIndex]) {
+					notInLoop = false
+					break;
+				}
+					
+			}
+			
+			if (notInLoop) {
+				loopList.push(rowData[i])
+			}
+		}
+		
+		for(var i = 0; i < loopList.length; i++)
+		{
+			sellItemList += '\n\u2022  ' + loopList[i][itemNameIndex] + ' ' + loopList[i][itemCatIndex]
+		}
+		
+		if (noPromptToFeed == false) {
+			if (sellAction == 0) {
+				proceed = (confirm('Are you sure you wish to sell all of the following items?' + sellItemList + '\n\nThere is no undo!')) 
+			} else if (sellAction > 0) {
+				sellAmount = prompt('Please enter the amount to sell for all items listed:' + sellItemList, sellAmount)
+			} else if (sellAction < 0) {
+				sellAmount = prompt('For the following items listed:' + sellItemList + '\nsell until the following amount is left.', sellAmount)				
+			}
+		}
+
+		if ((sellAmount != null) && (isNaN(sellAmount) == false)) proceed = true
+		
+		if (proceed){
+				sellItemList = ''
+				postNextSellItem()
+		} else {
+			alert('Action cancelled')
+			return;
+		}
+
+	}
+	
+	//This is done like this as receive ERR_INCOMPLETE_CHUNKED_ENCODING
+	function postNextSellItem(){
+		$('#posting .good').show();
+		
+		obj = loopList[index]
+				
+		if (sellAction == 0) {
+			sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total
+		} else if (sellAction > 0) {
+			sellAmountUrl = sellAmount
+		} else if (sellAction < 0) {
+			sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total - sellAmount
+		}
+
+		if (sellAmountUrl > 0) {
+			urlToPost = serverUrl + serverPathSellItem + '/' + itemCode[obj[itemCatIndex]] + '/' + obj[itemKeyIndex] + '?amount=' + sellAmountUrl
+			$('#posting #statusPost').text('Selling ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] );
+			createActionLog(actionLogId, false, 'Selling ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]);
+			if (debugShowObject) console.log(urlToPost);
+			$.ajax({
+				url: urlToPost,
+				type: 'POST',
+				dataType: 'json',
+				cache: false,
+				beforeSend: function(xhr){
+						xhr.setRequestHeader('x-api-user', userId);
+						xhr.setRequestHeader('x-api-key',  apiToken);
+					},
+				success: postSellItemSuccess,
+				error: postSellItemFailure
+			});		
+		} else {
+			//Not enough to sell
+			createActionLog(actionLogId, false, 'Not enough to sell of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] );
+			index++
+			postSellItemCompleted()			
+		}
+	}
+		
+
+	
+	function postSellItemFailure(data){
+		if (debug) console.log('debug postSellItemFailure start');
+		if (debugShowObject) console.log(data);
+		var errData = data;
+		createActionLog(actionLogId, true, errData.responseJSON.message);
+		alert('ERROR WITH  ' +  obj[itemNameIndex] + ' ' + obj[itemCatIndex] + '\n\n' + errData.responseJSON.error + '\n' + errData.responseJSON.message  + '\n\nPlease refetch your data and try again.');	
+		index++
+		
+		postSellItemCompleted()
+	}
+
+
+	function postSellItemSuccess(data){
+		if (debug) console.log('debug postSellItemSucess start');
+		$('#posting #statusPost').text('Successfully sold ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] ) ; //+ '(' + data.message + ')' );
+		createActionLog(actionLogId, true, 'Successfully sold ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]);
+		if (debugShowObject) console.log(data);
+		
+		index++
+		sellItemList += '\n\u2022  ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]  
+
+		postSellItemCompleted()
+		
+	}
+	
+	function postSellItemCompleted() {
+		if (index === loopList.length){
+			$('#posting .good').hide();
+			if (debugShowObject) console.log(sellItemList);
+			if (multiStep >= 0) {
+				multiStepArray[multiStep].result = 'The following items have been sold:' + sellItemList
+				multiStepNextAction()
+			} else {	
+				alert('The following items have been sold:' + sellItemList + '\n\nYour data will now be refreshed')
+				fetchData() 
+			}
+		} else {
+			postNextSellItem()
+		}		
+	
+	}
+}
+
+
 function multiStepNextAction() {
 	multiStep--
 	if (multiStep >= 0) {
 		if (multiStepArray[multiStep].action == 'postFeedPet') {
 			postFeedPet(multiStepArray[multiStep].dataSet, multiStepArray[multiStep].petKeyIndex, multiStepArray[multiStep].petNameIndex, true, -1, multiStep)
-		} else {
+		} else if (multiStepArray[multiStep].action == 'postHatchPet') {
 			postHatchPet(multiStepArray[multiStep].dataSet, multiStepArray[multiStep].petKeyIndex, multiStepArray[multiStep].petNameIndex, true, multiStep)		
+		} else if (multiStepArray[multiStep].action == 'postSellItem') {
+			postHatchPet(multiStepArray[multiStep].dataSet, multiStepArray[multiStep].petKeyIndex, multiStepArray[multiStep].petNameIndex, true, multiStep)		
+		} else {
+			alert('Fell off the steps! Call an Ambulance!')
 		}
 	} else {
 		alert('All steps completed!\n\nSee Log for more detail after data is refreshed.')
@@ -1637,6 +1860,7 @@ function parseData() {
 			eggs = {};
 			potions = {};
 			food = {};
+			sellItems = {};
 			triadBingoRequirement = {};
 			canTriadBingo = true;
 			
@@ -1644,7 +1868,9 @@ function parseData() {
 			var arrayToAdd = []; //Used to create final array to add to dataSet
 			
 			//arrays to construct stuff because I like altering things in one place than trailing through code... (Didn't do too well with this section).	
-			foodTarget = ['Base', 'CottonCandyBlue', 'CottonCandyPink', 'Desert', 'Golden', 'Red', 'Shade', 'Skeleton', 'White', 'Zombie']
+			var foodTarget = {Base: 'Meat', CottonCandyBlue: 'CottonCandyBlue', CottonCandyPink: 'CottonCandyPink', Desert: 'Potatoe', Golden: 'Honey', Red: 'Strawberry', Shade: 'Chocolate', Skeleton: 'Fish', White: 'Milk', Zombie: 'RottenMeat'}
+
+			var petTypes = {drop: 'Base (Gen1)', premium: 'Magic Potion', quest: 'Quest', special: 'Rare' } 
 			
 			///////////////////////////////////////////////////////////////
 			////   Single   Data                              ////////////
@@ -1671,7 +1897,7 @@ function parseData() {
 			
 			user.feedStats.food = {}
 			$.each(foodTarget, function(index, obj){
-				user.feedStats.food[obj] = 0
+				user.feedStats.food[index] = 0
 			});
 			user.feedStats.food.all = 0
 
@@ -1680,19 +1906,43 @@ function parseData() {
 			$.each(content.food, function(index, obj){
 				if (obj.target != undefined) {
 					food[index] = obj
+					if (showImage) {
+						food[index].imgTag = '<img src="' + imageURL + imageStableFood + index + imageFileSuffix + '" alt="' + obj.text + '">'
+					} else {
+						food[index].imgTag = ''
+					}
 					
-					food[index].total = user.items.food[index]
-					user.feedStats.food[obj.target] += user.items.food[index]
-					user.feedStats.food.all += user.items.food[index]
+					if (user.items.food[index] != undefined) {
+						food[index].total = user.items.food[index]
+					} else {
+						food[index].total = 0 
+					}
 					
+					
+					
+					if (food[index].total > 0) sellItems['food_' + index] = {imgTag: food[index].imgTag, key: index, category: 'food', type: '', text: food[index].text, note: food[index].notes, value: food[index].value, total: food[index].total}
+					
+					user.feedStats.food[obj.target] += food[index].total
+					user.feedStats.food.all += food[index].total
 				}
 			});			
 
 			//Eggs
 			$.each(content.eggs, function(index, obj){
 					eggs[index] = obj
+					if (showImage) {
+						eggs[index].imgTag = '<img src="' + imageURL + imageStableEgg + index + imageFileSuffix + '" alt="' + obj.text + '">'
+					} else {
+						eggs[index].imgTag = ''
+					}
+					if (user.items.eggs[index] != undefined) {
+						eggs[index].total = user.items.eggs[index]
+					} else {
+						eggs[index].total = 0 
+					}
 					
-					eggs[index].total = user.items.eggs[index]
+					
+					if (eggs[index].total > 0) sellItems['egg_' + index] = {imgTag: eggs[index].imgTag, key: index, category: 'egg', type: '', text: eggs[index].text, note: eggs[index].notes, value: eggs[index].value, total: eggs[index].total} //type will be filled out later
 					
 					//Set up empty stats
 					eggs[index].feedStats = {}
@@ -1704,15 +1954,34 @@ function parseData() {
 
 					
 					if (content.dropEggs[index] != undefined) {
-						triadBingoRequirement['egg_' + index] = {key: index, type: 'egg', text: eggs[index].text, require: 20, need: 20}
+						triadBingoRequirement['egg_' + index] = {imgTag: eggs[index].imgTag, key: index, category: 'egg', text: eggs[index].text + ' Egg', require: 20, need: 20, have: 0, missing: 999} //have and missing filled out later
 					}
 			});	
 
 			//Potions
 			$.each(content.hatchingPotions, function(index, obj){
+					var typePotion = ''
 					potions[index] = obj
+					if (showImage) {
+						potions[index].imgTag = '<img src="' + imageURL + imageStablePotion + index + imageFileSuffix + '" alt="' + obj.text + '">'
+					} else {
+						potions[index].imgTag = ''
+					}
+
+					if (potions[index].premium == true) {
+						typePotion = 'Magic Potion' 
+					}
+					else { 
+						typePotion = petTypes['drop']
+					}
+
+					if (user.items.hatchingPotions[index] != undefined) {
+						potions[index].total = user.items.hatchingPotions[index]
+					} else {
+						potions[index].total = 0 
+					}
 					
-					potions[index].total = user.items.hatchingPotions[index]
+					if (potions[index].total > 0) sellItems['potion_' + index] = {imgTag: potions[index].imgTag, key: index, category: 'potion', type: typePotion, text: potions[index].text, note: potions[index].notes, value: potions[index].value, total: potions[index].total}
 
 					//Set up empty stats
 					potions[index].feedStats = {}
@@ -1722,22 +1991,31 @@ function parseData() {
 					potions[index].feedStats.mountCount = 0
 					potions[index].feedStats.petNoFeedCount = 0
 
-					if (obj.premium == true) {
-						obj.foodAvail = user.feedStats.food.all
+					if (potions[index].premium == true) {
+						potions[index].foodAvail = user.feedStats.food.all
 					} else {
-						obj.foodAvail = user.feedStats.food[index]
+						potions[index].foodAvail = user.feedStats.food[index]
 					}
 					
 					if (content.dropHatchingPotions[index] != undefined) {
-						triadBingoRequirement['potion_' + index] = {key: index, type: 'potion', text: potions[index].text, require: 18, need: 18}
-						triadBingoRequirement['food_' + index] = {key: index, type: 'food', text: potions[index].text + ' Food', require: 81, need: 81}
+						triadBingoRequirement['potion_' + index] = {imgTag: potions[index].imgTag, key: index, category: 'potion', text: potions[index].text + ' Potion', require: 18, need: 18, have: 0, missing: 999} //have and missing filled out later
+						triadBingoRequirement['food_' + index] = {imgTag:  food[foodTarget[index]].imgTag, key: index, category: 'food', text: potions[index].text + ' Food', require: 81, need: 81, have: 0, missing: 999} //have and missing filled out later
 					}
+					
+					
 			});	
 
 			//Pets
 			$.each(content.petInfo, function(index, obj){
 				if (obj.type != 'special') {
 					pets[index] = obj
+					if (showImage) {
+						pets[index].imgTag = '<img src="' + imageURL + imageStablePet + index + imageFileSuffix + '" alt="' + obj.text + '">'
+					} else {
+						pets[index].imgTag = ''
+					}
+					
+					pets[index].typePretty = petTypes[obj.type]
 					pets[index].eggPretty = eggs[pets[index].egg].text
 					pets[index].potionPretty = potions[pets[index].potion].text
 					pets[index].canHatch = 'false' //will be altered throughout if statements if required
@@ -1745,7 +2023,8 @@ function parseData() {
 					
 					if (obj.type != 'premium') eggs[pets[index].egg].feedStats.count++
 					potions[pets[index].potion].feedStats.count++
-					if (obj.type != 'premium') eggs[pets[index].egg].feedStats.type = obj.type
+					if (obj.type != 'premium') eggs[pets[index].egg].feedStats.type = obj.typePretty
+					if (obj.type != 'premium') if (sellItems['egg_' + pets[index].egg] != undefined) sellItems['egg_' + pets[index].egg].type = obj.typePretty
 					
 					//Does User have Pet & Mount?
 					if (user.items.pets[index] != undefined) {
@@ -1913,6 +2192,26 @@ function parseData() {
 			});
 			if (debug) console.log('Finish food');
 
+
+			///////////////////////////////////////////////////////////////
+			////   Sell Items										  ////////////
+			//////////////////////////////////////////////////////////////
+			$.each(sellItems, function(index, obj){
+				
+				$.each(sectionsToDisplay, function(index2, obj2){
+					if (obj2.type == 'sectionTable' ) {
+						if (sectionTables[obj2.id].type == 'sellItems'){
+							addToArray = []; //clear array
+							$.each(sectionTables[obj2.id].dataTable, function(index3, obj3){
+								addToArray.push(eval('obj.' + obj3))
+							});
+							sectionTables[obj2.id].dataSet.push(addToArray);
+						}
+					}
+				});
+			});
+			if (debug) console.log('Finish sellItems');
+
 			///////////////////////////////////////////////////////////////
 			////   Pets										  ////////////
 			//////////////////////////////////////////////////////////////
@@ -1935,27 +2234,22 @@ function parseData() {
 			///////////////////////////////////////////////////////////////
 			////   Triad Bingo 								  ////////////
 			//////////////////////////////////////////////////////////////
+			if (debugShowObject) console.log(triadBingoRequirement);
 			var missingItem;
 			var requireTotal = 0;
 			$.each(triadBingoRequirement, function(index, obj){
 				missingItem = false;
 				requireTotal += obj.require;
 				
-				if (obj.type == 'egg') {
-					obj.have = eggs[obj.key].total
-					if (eggs[obj.key].total < obj.require ) {
-						missingItem = true;
-					}
-				} else if (obj.type == 'potion') {
-					obj.have = potions[obj.key].total
-					if (potions[obj.key].total < obj.require ) {
-						missingItem = true;
-					}
-				} else if (obj.type == 'food') {
-					obj.have = user.feedStats.food[obj.key]
-					if (user.feedStats.food[obj.key] < obj.require ) {
-						missingItem = true;
-					}
+				if (obj.category == 'egg') {
+					if (eggs[obj.key].total != undefined) obj.have = eggs[obj.key].total
+				} else if (obj.category == 'potion') {
+					if (potions[obj.key].total != undefined) obj.have = potions[obj.key].total
+				} else if (obj.category == 'food') {
+					if (user.feedStats.food[obj.key] != undefined) obj.have = user.feedStats.food[obj.key]
+				}
+				if (obj.have < obj.require ) {
+					missingItem = true;
 				}
 				obj.missing = obj.need - obj.have
 				
@@ -2290,6 +2584,10 @@ a.dt-button.feedPetButton {
 	color: orange;
 }
 
+a.dt-button.sellButton {
+	color: orange;
+}
+
 
 div.dt-button-collection {
 	width: 180px;
@@ -2390,7 +2688,7 @@ h2 {
 *********************************************************************/
 
 #documentationAndForm > div {
-    max-width: 770px;
+    max-width: 700px;
 }
 #documentationAndForm #documentationAndFormClose {
     display: none;
@@ -2414,18 +2712,12 @@ h2 {
     display: block;
     float: left;
     clear: left;
-    margin: 9px 0;
-}
-#userApiDetailsForm fieldset input[type="button"] {
-    display: block;
-    float: left;
-    clear: left;
-    margin: 9px 0;
+    margin: 10px 0;
 }
 #userApiDetailsForm fieldset label span {
     display: block;
     float: left;
-    width: 11em;
+    width: 8em;
 }
 #userApiDetailsForm fieldset label input {
     float: left;
@@ -2440,6 +2732,7 @@ h2 {
 #userApiDetailsForm fieldset li {
     margin-bottom: 7px;
 }
+
 
 
 
@@ -2520,12 +2813,11 @@ ul#tableOfContents > li {
 </style>
 </head>
 <body><div id="innerBody">	
-<h1>BETA <a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
+<h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
     <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.0)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
-<div id="headerGroupExtras"></div>
-<hr class="clear" />
+
 
 
 <div id="loading">
@@ -2558,16 +2850,25 @@ ul#tableOfContents > li {
         <dd><ul>
             <li>Features:
                 <ul>
-					<li>###</li>
+					<li class="subheading">Sell Items</li>
+					<li>Triad Bingo hatch/feed button now appears regardless if the user has all items available.</li>
+					<li>Give the user the ability to show images of pets/eggs/potions and food where appropriate.</li>
 				</ul> 
             </li>
 	        <li>Documentation:
                 <ul>
-					<li>Added more description to each of the sections</li>
+					<li>Added more description to each of the sections.</li>
+					<li>Change type in Pets to match the description used in game.</li>
+					<li>Eggs section always shows zero when the user has no eggs.</li>
+					<li>Potions section always shows zero when the user has no food or potions.</li>
+					<li>Pets section always shows zero when the user has no food but can feed pet.</li>
+					<li>Expanded the name in Triad Bingo to make it clear what you are looking for.</li>
+					<li>Rearrange of sections, columns as required</li>
                 </ul>
             </li>		
 	        <li>Bug Fixes:
                 <ul>
+					<li>Triad Bingo now shows items that are missing if the user has none.</li>
 					<li>documentation / options always shows next to the re-fetch button</li>
 					<li>Typo options</li>
                </ul>
@@ -2631,6 +2932,9 @@ ul#tableOfContents > li {
             </label>
             <label for="apiToken"><span>API Token</span>
                 <input type="password" name="apiToken" id="apiToken"/>
+            </label>
+			<label for="showImage"><span>Show Images?</span>
+                <input type="checkbox" name="showImage" id="showImage"/>
             </label>
 			<div id="exportOptionSelector"></div>
             <input class="div-fetchData" type="submit" value="Fetch Pet Data" />
