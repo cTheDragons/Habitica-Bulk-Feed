@@ -1,6 +1,10 @@
 # Habitica Bulk Feed
-Tool that bulk feeds pets and hatches eggs (currently only gen1).
+Tool that bulk feeds and hatches pets. Also has the option to bulk sell items too.
 
-This tool has been placed here to help with Habitica Issue. It is currently not ready to be contributed too or used in any shape.
+This tool is hosted at https://oldgods.net/habitica/cTheDragons/feed.html
+
+***Contributions Welcome!***
+
+Any issues please report to Testing & Bug Squashing for Dragon Tools Guild for a faster response and to avoid duplication.
 
 
