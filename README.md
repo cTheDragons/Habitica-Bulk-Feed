@@ -1,4 +1,4 @@
-# Habitica Bulk Feed
+# Habitica Bulk Feed Pets Tool
 Tool that bulk feeds and hatches pets. Also has the option to bulk sell items too.
 
 This tool is hosted at https://oldgods.net/habitica/cTheDragons/feed.html

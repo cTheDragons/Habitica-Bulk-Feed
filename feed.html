@@ -436,6 +436,8 @@ if (debug) console.log('debug enableShowHideToggling');
         window.scrollTo(0, 0);
     });
 	$('body').on('click', '.div-triadBingo', function(event){
+		$(this).attr('disabled','disabled');
+		$('#refetch').attr('disabled','disabled');
 		triadBingoHatchFeedPet()
 	});
 	
@@ -540,8 +542,11 @@ if (debug) console.log('debug #userApiDetailsForm (Fetch Data)');
 	fetchData();
 	
 	$('.showHideToggle').data('target', 'petsSection')
-	$('.showHideToggle').data('closemainsections', 'true')
+//	$('.showHideToggle').data('closemainsections', 'true')
 	$('.showHideToggle').trigger('click');
+	$('.showHideToggle').data('target', 'petsSection')
+	$('.showHideToggle').removeData('target')
+	
 }); 
 
 
@@ -622,12 +627,20 @@ function fetchData() {
     }
 }
 
-
-
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 ////  Post functions 				     //////////////////////////////
 //////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 // All post functions are implemented serial as they are unreliable when performed in parallel.
+
+
+
+//////////////////////////////////////////////////////////////////////
+////  Post Hatch Pet				      //////////////////////////////
+//////////////////////////////////////////////////////////////////////
 function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiStep) {
 	if (debug) console.log('debug postHatchPet start');
 	var urlToPost = ''	
@@ -783,7 +796,9 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 	}
 }
 
-
+//////////////////////////////////////////////////////////////////////
+////  Post Feed Pet				      //////////////////////////////
+//////////////////////////////////////////////////////////////////////
 function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKeyIndex, multiStep) {
 	if (debug) console.log('debug postFeedPet start');
 	var urlToPost = ''	
@@ -861,8 +876,8 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		
 		//Find Food to use
 		foodKey = ''
-		if (pets[obj[petKeyIndex]].feedValue > 0) {
-			if (foodKeyIndex = -1) {
+		if ((pets[obj[petKeyIndex]].feedValue > 0) || multiStep >= 0) { //Assume for MutliStep no checking required if pet exists
+			if (foodKeyIndex < 0) {
 				$.each(food, function(index2, obj2){
 					if (obj2.total > 0 ) {
 						if (pets[obj[petKeyIndex]].type == 'premium') {
@@ -874,8 +889,10 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 					
 				});
 			} else {
-				if (food[obj[foodKeyIndex]].total > 0 ) {
-					foodKey = obj[foodKeyIndex]
+				if (food[obj[foodKeyIndex]] != undefined) {
+					if (food[obj[foodKeyIndex]].total > 0 ) {
+						foodKey = obj[foodKeyIndex]
+					}
 				}
 			}
 		}
@@ -954,119 +971,11 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 	}
 }
 
-function manualFeedPet(rowData, petKeyIndex, petNameIndex, foodKey) {
-	if (debug) console.log('debug mannualFeedPet start');
-	var feedPetList = ''
-	var notFeedPetList = ''
-	var index = 0
-	var loopList = []
 
-	
-	if (rowData.length == 0){
-		if (debug) console.log('debug no users to remove');
-		alert('No row selected.\nPlease select a row before trying again.');
-		return;
-	
-	} else {
-		if (debugShowObject) console.log( rowData );
-		
-		//get UniqueRows
-		for(var i = 0; i < rowData.length; i++) {
-			//Check if can feed pet first
-			if  ((pets[rowData[i][petKeyIndex]].pet == true) && (pets[rowData[i][petKeyIndex]].foodAvail > 0)) {
-				notInLoop = true
-				
-				for(var j = 0; j < loopList.length; j++) {
-					if (rowData[i][petKeyIndex] == loopList[j][petKeyIndex]) {
-						notInLoop = false
-						break;
-					}
-						
-				}
-				
-				if (notInLoop) {
-					loopList.push(rowData[i])
-				}
-			} else {
-				notFeedPetList += '\n\u2022  ' + rowData[i][petNameIndex]
-			}
-		}
-		
-		if (notFeedPetList != '') {
-			if (loopList.length == 0 ) {
-				alert('The following pets cannot be feed: ' + notFeedPetList + '\n\nNo other Pets can be feed.\n\nAction cancelled')
-				return;
-			
-			}
-			if (confirm('The following pets cannot be feed: ' + notFeedPetList + '\n\nCancel feeding other pets?')){
-				alert('Action cancelled')
-				return;
-			}
-		}
 
-		for(var i = 0; i < loopList.length; i++)
-		{
-			loopList[i].push(foodKey)
-			feedPetList += '\n\u2022  ' + loopList[i][petNameIndex]
-		}
-		
-		if (confirm('Are you sure you wish to feed the following pets with ' + food[foodKey].text + ' ?' + feedPetList + '\n\n')){
-			postFeedPet(loopList, petKeyIndex, petNameIndex, true, (loopList[0].length-1), -1)
-		} else {
-			alert('Action cancelled')
-			return;
-		}
-
-	}
-}
-
-function triadBingoHatchFeedPet() {
-	var hatchFirst = []
-	var feedSecond = []
-	var hatchThird = []
-	var arrayToAdd = []
-	multiStepArray = []
-	multiStep = 0
-	
-	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?'
-	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Base (Gen 1) pets as much as possible?' 
-	
-	if (confirm(confirmMsg)) {
-
-	
-		$.each(pets, function(index, obj){
-			if (obj.type == 'drop') {
-				arrayToAdd = [index, obj.text]
-				if ((obj.pet == false) && (obj.mount == false)) {
-					
-					hatchFirst.push(arrayToAdd)
-					feedSecond.push(arrayToAdd)
-					hatchThird.push(arrayToAdd)
-				
-					
-				} else if ((obj.pet == true) && (obj.mount == false)) {
-					
-					feedSecond.push(arrayToAdd)
-					hatchThird.push(arrayToAdd)					
-					
-				} else if ((obj.pet == false) && (obj.mount == true)) {
-				
-					hatchThird.push(arrayToAdd)	
-				
-				}
-			}
-				
-		});
-
-		multiStepArray.push({action: 'postHatchPet', dataSet: hatchThird, petKeyIndex: 0, petNameIndex: 1, result: ''})
-		if (feedSecond.length > 0) multiStepArray.push({action: 'postFeedPet', dataSet: feedSecond, petKeyIndex: 0, petNameIndex: 1, result: ''})	
-		if (hatchFirst.length > 0) multiStepArray.push({action: 'postHatchPet', dataSet: hatchFirst, petKeyIndex: 0, petNameIndex: 1, result: ''})
-		multiStep = multiStepArray.length 
-		multiStepNextAction()
-		
-	}
-}
-
+//////////////////////////////////////////////////////////////////////
+////  Post Sell Items				      //////////////////////////////
+//////////////////////////////////////////////////////////////////////
 function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAction, noPromptToFeed, multiStep) {
 	if (debug) console.log('debug postSellItem start');
 	var urlToPost = ''	
@@ -1220,15 +1129,143 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 }
 
 
+//////////////////////////////////////////////////////////////////////
+////  Manual Feed Pet				      //////////////////////////////
+//////////////////////////////////////////////////////////////////////
+function manualFeedPet(rowData, petKeyIndex, petNameIndex, foodKey) {
+	if (debug) console.log('debug mannualFeedPet start');
+	var feedPetList = ''
+	var notFeedPetList = ''
+	var index = 0
+	var loopList = []
+
+	
+	if (rowData.length == 0){
+		if (debug) console.log('debug no users to remove');
+		alert('No row selected.\nPlease select a row before trying again.');
+		return;
+	
+	} else {
+		if (debugShowObject) console.log( rowData );
+		
+		//get UniqueRows
+		for(var i = 0; i < rowData.length; i++) {
+			//Check if can feed pet first
+			if  ((pets[rowData[i][petKeyIndex]].pet == true) && (pets[rowData[i][petKeyIndex]].foodAvail > 0)) {
+				notInLoop = true
+				
+				for(var j = 0; j < loopList.length; j++) {
+					if (rowData[i][petKeyIndex] == loopList[j][petKeyIndex]) {
+						notInLoop = false
+						break;
+					}
+						
+				}
+				
+				if (notInLoop) {
+					loopList.push(rowData[i])
+				}
+			} else {
+				notFeedPetList += '\n\u2022  ' + rowData[i][petNameIndex]
+			}
+		}
+		
+		if (notFeedPetList != '') {
+			if (loopList.length == 0 ) {
+				alert('The following pets cannot be feed: ' + notFeedPetList + '\n\nNo other Pets can be feed.\n\nAction cancelled')
+				return;
+			
+			}
+			if (confirm('The following pets cannot be feed: ' + notFeedPetList + '\n\nCancel feeding other pets?')){
+				alert('Action cancelled')
+				return;
+			}
+		}
+
+		for(var i = 0; i < loopList.length; i++)
+		{
+			loopList[i].push(foodKey)
+			feedPetList += '\n\u2022  ' + loopList[i][petNameIndex]
+		}
+		
+		if (confirm('Are you sure you wish to feed the following pets with ' + food[foodKey].text + ' ?' + feedPetList + '\n\n')){
+			postFeedPet(loopList, petKeyIndex, petNameIndex, true, (loopList[0].length-1), -1)
+		} else {
+			alert('Action cancelled')
+			return;
+		}
+
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////
+////  Triad Bingo			     		 //////////////////////////////
+//////////////////////////////////////////////////////////////////////
+function triadBingoHatchFeedPet() {
+	var hatchFirst = []
+	var feedSecond = []
+	var hatchThird = []
+	var arrayToAdd = []
+	multiStepArray = []
+	multiStep = 0
+	
+	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?\n\nYou may want to get a drink, or do some tasks as this will take a while. (Estimated over 20 minutes).'
+	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Base (Gen 1) pets as much as possible?\n\nYou may want to get a drink, or do some tasks as this will take a while. (Can be over 20 minutes).' 
+	
+	if (confirm(confirmMsg)) {
+
+	
+		$.each(pets, function(index, obj){
+			if (obj.type == 'drop') {
+				arrayToAdd = [index, obj.text]
+				if ((obj.pet == false) && (obj.mount == false)) {
+					
+					hatchFirst.push(arrayToAdd)
+					feedSecond.push(arrayToAdd)
+					hatchThird.push(arrayToAdd)
+				
+					
+				} else if ((obj.pet == true) && (obj.mount == false)) {
+					
+					feedSecond.push(arrayToAdd)
+					hatchThird.push(arrayToAdd)					
+					
+				} else if ((obj.pet == false) && (obj.mount == true)) {
+				
+					hatchThird.push(arrayToAdd)	
+				
+				}
+			}
+				
+		});
+
+		multiStepArray.push({action: 'postHatchPet', dataSet: hatchThird, petKeyIndex: 0, petNameIndex: 1, result: ''})
+		if (feedSecond.length > 0) multiStepArray.push({action: 'postFeedPet', dataSet: feedSecond, petKeyIndex: 0, petNameIndex: 1, result: ''})	
+		if (hatchFirst.length > 0) multiStepArray.push({action: 'postHatchPet', dataSet: hatchFirst, petKeyIndex: 0, petNameIndex: 1, result: ''})
+		multiStep = multiStepArray.length 
+		multiStepNextAction()
+	} else {
+		$('.div-triadBingo').removeAttr('disabled');
+		$('#refetch').removeAttr('disabled');
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
+////  Multi-step (Supporting function for Triad & Others ////////////
+//////////////////////////////////////////////////////////////////////
 function multiStepNextAction() {
 	multiStep--
+	if (debug) console.log('MultiStep Next Action: ' + multiStep)
+	if (debugShowObject) console.log(multiStepArray)
+
 	if (multiStep >= 0) {
 		if (multiStepArray[multiStep].action == 'postFeedPet') {
 			postFeedPet(multiStepArray[multiStep].dataSet, multiStepArray[multiStep].petKeyIndex, multiStepArray[multiStep].petNameIndex, true, -1, multiStep)
 		} else if (multiStepArray[multiStep].action == 'postHatchPet') {
 			postHatchPet(multiStepArray[multiStep].dataSet, multiStepArray[multiStep].petKeyIndex, multiStepArray[multiStep].petNameIndex, true, multiStep)		
 		} else if (multiStepArray[multiStep].action == 'postSellItem') {
-			postHatchPet(multiStepArray[multiStep].dataSet, multiStepArray[multiStep].petKeyIndex, multiStepArray[multiStep].petNameIndex, true, multiStep)		
+			postSellItem(multiStepArray[multiStep].dataSet, multiStepArray[multiStep].itemKeyIndex, multiStepArray[multiStep].itemCatIndex, multiStepArray[multiStep].itemNameIndex, multiStepArray[multiStep].sellAction,  true, multiStep)		
 		} else {
 			alert('Fell off the steps! Call an Ambulance!')
 		}
@@ -1239,7 +1276,9 @@ function multiStepNextAction() {
 }
 
 
-
+//////////////////////////////////////////////////////////////////////
+////  Create Action Log		     		 //////////////////////////////
+//////////////////////////////////////////////////////////////////////
 function createActionLog(actionLogId, response, message) {
 	var addToArray = {}
 	var epoch = moment().valueOf() 
@@ -1250,9 +1289,16 @@ function createActionLog(actionLogId, response, message) {
 }
 
 
+
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 ////  Parse Data		      //////////////////////////////
 //////////////////////////////////////////////////////////////////////	
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 function parseData() {
 	if (debug) console.log('debug parseData start');
 
@@ -1278,6 +1324,8 @@ function parseData() {
 	$('#posting .good').hide(); // just to be sure
     $('#documentationAndFormClose').show();
     $('#documentationAndForm').hide();
+	$('.div-triadBingo').removeAttr('disabled');
+	$('#refetch').removeAttr('disabled');
 	
 	//formatAndDisplayDASHBOARD();
     formatAndDisplayTOC();
@@ -2814,7 +2862,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.0)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.1)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -2846,6 +2894,22 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>1.1 - 3! Goodness me! Bingo!<span class="date">2017-08-04</span></dt>
+        <dd><ul>
+	        <li>Documentation:
+                <ul>
+					<li>Added warning when completing Triad Bingo it may take over 20 minutes.</li>
+                </ul>
+            </li>		
+	        <li>Bug Fixes:
+                <ul>
+					<li>Triad Bingo now works if you are hatching -> Feeding -> hatching. (Use to skip the feeding)</li>
+					<li>Triad Bingo and Re-Fetch Data button disables when completing Triad Bingo to avoid issues. (Not fool proof but stops the stray click).</li>
+					<li>Manual Feed now actually uses the food you specified. (The computer does not always know better)</li>
+					<li>Version information now shows after fetching data.</li>
+               </ul>
+            </li>
+		</ul></dd>	
 		<dt>1.0 - Public Release<span class="date">2017-08-03</span></dt>
         <dd><ul>
             <li>Features:
