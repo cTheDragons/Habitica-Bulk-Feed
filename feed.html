@@ -107,7 +107,7 @@ var sectionsToDisplay = [
 	{type: 'heading', id: 'headingGroup2', title: 'Analyze', showOnly: [], description: ''},
 		{type: 'sectionTable', id: 'eggs', title: 'By Egg Type', showOnly: [], description: 'Lists all eggs and counts of pet & mounts.'},
 		{type: 'sectionTable', id: 'potions', title: 'By Potion Type', showOnly: [], description: 'Lists all potions and counts of pet & mounts.'},
-		{type: 'sectionTable', id: 'actionLog', title: 'Activity Log', showOnly: [], description: 'Lists all actions and reponses from Bulk Feeding the pets through the tools.'}
+		{type: 'sectionTable', id: 'actionLog', title: 'Activity Log', showOnly: [], description: 'Lists all actions and responses from Bulk Feeding the pets through the tools.'}
 	
 ]
 
@@ -770,7 +770,7 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 		$('#posting #statusPost').text('Successfully Hatched ' + obj[petNameIndex] + '(' + data.message + ')' );
 		createActionLog(actionLogId, true, data.message);
 		if (debugShowObject) console.log(data);
-		
+		pets[obj[petKeyIndex]].feedValue = 1 //This is set for multistep to state the pet can be feed.
 
 		index++
 		hatchPetList += '\n\u2022  ' + obj[petNameIndex]  	
@@ -876,7 +876,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		
 		//Find Food to use
 		foodKey = ''
-		if ((pets[obj[petKeyIndex]].feedValue > 0) || multiStep >= 0) { //Assume for MutliStep no checking required if pet exists
+		if ((pets[obj[petKeyIndex]].feedValue > 0) ) { 
 			if (foodKeyIndex < 0) {
 				$.each(food, function(index2, obj2){
 					if (obj2.total > 0 ) {
@@ -895,32 +895,38 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 					}
 				}
 			}
-		}
+
 		
-		if (foodKey != '') {
-			food[foodKey].total-- //remove one item away
-	
-			urlToPost = serverUrl + serverPathFeedPet + '/' + obj[petKeyIndex] + '/' + foodKey
-			$('#posting #statusPost').text('Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text );
-			createActionLog(actionLogId, false, 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text);
-			if (debugShowObject) console.log(urlToPost);
-			$.ajax({
-				url: urlToPost,
-				type: 'POST',
-				dataType: 'json',
-				cache: false,
-				beforeSend: function(xhr){
-						xhr.setRequestHeader('x-api-user', userId);
-						xhr.setRequestHeader('x-api-key',  apiToken);
-					},
-				success: postFeedPetSuccess,
-				error: postFeedPetFailure
-			});		
+			if (foodKey != '') {
+				food[foodKey].total-- //remove one item away
+		
+				urlToPost = serverUrl + serverPathFeedPet + '/' + obj[petKeyIndex] + '/' + foodKey
+				$('#posting #statusPost').text('Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text );
+				createActionLog(actionLogId, false, 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text);
+				if (debugShowObject) console.log(urlToPost);
+				$.ajax({
+					url: urlToPost,
+					type: 'POST',
+					dataType: 'json',
+					cache: false,
+					beforeSend: function(xhr){
+							xhr.setRequestHeader('x-api-user', userId);
+							xhr.setRequestHeader('x-api-key',  apiToken);
+						},
+					success: postFeedPetSuccess,
+					error: postFeedPetFailure
+				});		
+			} else {
+				//No Food To Feed
+				createActionLog(actionLogId, false, 'Not enough food to feed ' + obj[petNameIndex] );
+				index++
+				postFeedPetCompleted()
+			}
 		} else {
-			//No Food To Feed
-			createActionLog(actionLogId, false, 'Not enough food to feed ' + obj[petNameIndex] );
-			index++
-			postFeedPetCompleted()
+				//No Pet To Feed
+				createActionLog(actionLogId, false, 'Cannot feed pet ' + obj[petNameIndex] + ' as it is not hatched.' );
+				index++
+				postFeedPetCompleted()
 		}
 	}
 		
@@ -2862,7 +2868,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.1)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.2)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -2894,6 +2900,15 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>1.2 - We can wait without the errors<span class="date">2017-08-05</span></dt>
+        <dd><ul>	
+	        <li>Bug Fixes:
+                <ul>
+					<li>Removing the error for no pet when Triad Bingo button is used.</li>
+					<li>Typo responses.</li>
+               </ul>
+            </li>
+		</ul></dd>	
 		<dt>1.1 - 3! Goodness me! Bingo!<span class="date">2017-08-04</span></dt>
         <dd><ul>
 	        <li>Documentation:
