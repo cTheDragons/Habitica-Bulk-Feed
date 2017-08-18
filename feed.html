@@ -191,7 +191,7 @@ sectionTables['triadBingoRequirement'] = {
 	type: 'triadBingoRequirement',
 	dataSet: [], 
 	dataSetHeader: ['', 'Category', 'Name', 'Require', 'Have', 'Missing'], 
-	dataTable: ['imgTag', 'category', 'text', 'need', 'have', 'missing'],
+	dataTable: ['imgTag', 'category', 'text', 'require', 'have', 'missing'],
 	babyBear: {show: [1,4], orderBy: [[1, 'asc'],[2, 'asc']]},
 	mamaBear: {show: [1,3,4], orderBy: [[1, 'asc'],[2, 'asc']]},
 	papaBear: {show: ['all'], orderBy: [[1, 'asc'],[2, 'asc']]},
@@ -215,12 +215,12 @@ sectionTables['triadBingoRequirement'] = {
 sectionTables['sellItems'] = {
 	type: 'sellItems',
 	dataSet: [], 
-	dataSetHeader: ['', 'Key', 'Category', 'Name',  'Type', 'Description', 'Gold Value', 'Total'], 
-	dataTable: ['imgTag', 'key', 'category', 'text', 'type', 'note', 'value', 'total'],
-	babyBear: {show: [2,3,7], orderBy: [[2, 'asc'],[3, 'asc']]},
-	mamaBear: {show: [2,3,6,7], orderBy: [[2, 'asc'],[3, 'asc']]},
-	papaBear: {show: [0,2,3,4,5,6,7], orderBy: [[2, 'asc'],[3, 'asc']]},
-	extraColumnDefs: [{'className': 'dt-right', 'targets': [6,7]}],
+	dataSetHeader: ['', 'Key', 'Category', 'Name',  'Type', 'Gold Value', 'Total'], 
+	dataTable: ['imgTag', 'key', 'category', 'text', 'type', 'value', 'total'],
+	babyBear: {show: [2,3,6], orderBy: [[2, 'asc'],[3, 'asc']]},
+	mamaBear: {show: [2,3,5,6], orderBy: [[2, 'asc'],[3, 'asc']]},
+	papaBear: {show: [0,2,3,4,5,6], orderBy: [[2, 'asc'],[3, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-right', 'targets': [5,6]}],
 	subTitle: function (){
 		var html = selectionHeadingMultiSelect()
 		return html 		
@@ -243,21 +243,22 @@ sectionTables['sellItems'] = {
 					var itemCatIndex = sectionTables['sellItems'].itemCatIndex;
 					var itemNameIndex = sectionTables['sellItems'].itemNameIndex;
 					postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, obj.sellAction, false, -1)	
-				}
+				},
+				className: 'sellButton'
 			}
 			sellButton.push(singleButton)
 		});
 		
 		returnButton = []
-		returnButton.push({
+/*		returnButton.push({
 				extend: 'collection',
 				text: 'Sell',
 				buttons: sellButton,
 				autoClose: true,
 				className: 'sellButton'		
 		})			
-					
-			
+*/	//Users didn't realise there was multiple options				
+		returnButton = sellButton
 		return returnButton
 	}
 }
@@ -265,12 +266,12 @@ sectionTables['sellItems'] = {
 sectionTables['eggs'] = {
 	type: 'eggs',
 	dataSet: [], 
-	dataSetHeader: ['', 'Key', 'Name', 'Type', 'Egg Count', 'Not Hatched',  'Pets To Feed', 'Mounts', 'ReGen Pets'], 
-	dataTable: ['imgTag', 'key', 'text', 'feedStats.type', 'total', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount'],
+	dataSetHeader: ['', 'Key', 'Name', 'Type', 'Egg Count', 'Not Hatched',  'Pets To Feed', 'Mounts', 'ReGen Pets', 'All Pets Fed?', 'HatchSpaces', 'Pet Feed List'], 
+	dataTable: ['imgTag', 'key', 'text', 'feedStats.type', 'total', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount', 'feedStats.allPetsFed', 'feedStats.hatchSpaceCount', 'feedStats.petFeedList'],
 	babyBear: {show: [2,4], orderBy: [[2, 'asc']]},
 	mamaBear: {show: [2,3,4], orderBy: [[2, 'asc']]},
 	papaBear: {show: [0,2,3,4,5,6,7,8], orderBy: [[2, 'asc']]},
-	extraColumnDefs: [{'className': 'dt-right', 'targets': [4,5,6,7,8]}],
+	extraColumnDefs: [{'className': 'dt-center', 'targets': [9]}, {'className': 'dt-right', 'targets': [4,5,6,7,8,10]}],
 	subTitle: function (){
 		var html = ''
 		html += 'Magic Potion Pets are not included in the counts. Please see <span class="showHideToggle" data-target="potionsSection" data-closemainsections="true">Analyze By Potion Section</span> for counts of these pets.'
@@ -319,7 +320,7 @@ function selectionHeadingMultiSelect() {
 var exportOptions = [
 	{id: 'babyBear', shortDesc: 'Baby Bear', longDesc: 'Displays & exports short table format'},
 	{id: 'mamaBear', shortDesc: 'Mama Bear', longDesc: 'Displays & exports medium table format'},
-	{id: 'papaBear', shortDesc: 'Papa Bear', longDesc: 'Displays & exports max table format'}
+	{id: 'papaBear', shortDesc: 'Papa Bear', longDesc: 'Displays & exports max table format (most)'}
 ];
 var exportFormats = [
 	{id: 0, shortDesc: 'Warm Porridge', longDesc: 'Displays & exports with Emoji & Text converted but HTML removed', convertMarkup: true, removeHtml: true, convertLineBreaks: false},
@@ -437,7 +438,6 @@ if (debug) console.log('debug enableShowHideToggling');
     });
 	$('body').on('click', '.div-triadBingo', function(event){
 		$(this).attr('disabled','disabled');
-		$('#refetch').attr('disabled','disabled');
 		triadBingoHatchFeedPet()
 	});
 	
@@ -722,32 +722,33 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 		eggKey = pets[obj[petKeyIndex]].egg 
 		potionKey = pets[obj[petKeyIndex]].potion 
 		
-		
-		if ((eggs[eggKey].total > 0) && (potions[potionKey].total > 0)) {
-			eggs[eggKey].total-- //remove one item away
-			potions[potionKey].total-- //remove one item away
-			
-			urlToPost = serverUrl + serverPathHatchPet + '/' + eggKey + '/' + potionKey
-			$('#posting #statusPost').text('Hatching ' + obj[petNameIndex] );
-			createActionLog(actionLogId, false, 'Hatching ' + obj[petNameIndex] );
-			if (debugShowObject) console.log(urlToPost);
-			$.ajax({
-				url: urlToPost,
-				type: 'POST',
-				dataType: 'json',
-				cache: false,
-				beforeSend: function(xhr){
-						xhr.setRequestHeader('x-api-user', userId);
-						xhr.setRequestHeader('x-api-key',  apiToken);
-					},
-				success: postHatchPetSuccess,
-				error: postHatchPetFailure
-			});		
-		} else {
-			//No Eggs To hatch
-			createActionLog(actionLogId, false, 'Not enough eggs or potions to hatch ' + obj[petNameIndex] );
-			index++
-			postHatchPetCompleted()
+		if (pets[obj[petKeyIndex]].pet == false){ //test for triad Bingo
+			if ((eggs[eggKey].total > 0) && (potions[potionKey].total > 0)) {
+				eggs[eggKey].total-- //remove one item away
+				potions[potionKey].total-- //remove one item away
+				
+				urlToPost = serverUrl + serverPathHatchPet + '/' + eggKey + '/' + potionKey
+				$('#posting #statusPost').text('Hatching ' + obj[petNameIndex] );
+				createActionLog(actionLogId, false, 'Hatching ' + obj[petNameIndex] );
+				if (debugShowObject) console.log(urlToPost);
+				$.ajax({
+					url: urlToPost,
+					type: 'POST',
+					dataType: 'json',
+					cache: false,
+					beforeSend: function(xhr){
+							xhr.setRequestHeader('x-api-user', userId);
+							xhr.setRequestHeader('x-api-key',  apiToken);
+						},
+					success: postHatchPetSuccess,
+					error: postHatchPetFailure
+				});		
+			} else {
+				//No Eggs To hatch
+				createActionLog(actionLogId, false, 'Not enough eggs or potions to hatch ' + obj[petNameIndex] );
+				index++
+				postHatchPetCompleted()
+			}
 		}
 	}
 		
@@ -878,16 +879,26 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		foodKey = ''
 		if ((pets[obj[petKeyIndex]].feedValue > 0) ) { 
 			if (foodKeyIndex < 0) {
-				$.each(food, function(index2, obj2){
-					if (obj2.total > 0 ) {
-						if (pets[obj[petKeyIndex]].type == 'premium') {
-							foodKey = index2
-						} else {
+				if (pets[obj[petKeyIndex]].type == 'premium') {
+					var maxFood = 0
+					$.each(potions, function(index2, obj2){
+						if (obj2.foodAvail > maxFood ) {
+							maxFood = obj2.foodAvail
+							$.each(food, function(index3, obj3){
+								if ((obj3.total > 0 ) && (obj3.target == index2)) {
+									foodKey = index3
+								}						
+							});
+						}						
+					});
+				} else {
+					$.each(food, function(index2, obj2){
+						if (obj2.total > 0 ) {
 							if (pets[obj[petKeyIndex]].potion == obj2.target) foodKey = index2
 						}
-					}
-					
-				});
+						
+					});
+				}
 			} else {
 				if (food[obj[foodKeyIndex]] != undefined) {
 					if (food[obj[foodKeyIndex]].total > 0 ) {
@@ -899,6 +910,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		
 			if (foodKey != '') {
 				food[foodKey].total-- //remove one item away
+				potions[food[foodKey].target].foodAvail-- //for magic potion pets
 		
 				urlToPost = serverUrl + serverPathFeedPet + '/' + obj[petKeyIndex] + '/' + foodKey
 				$('#posting #statusPost').text('Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text );
@@ -953,6 +965,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		
 		if (data.data <= 0) {
 			index++
+			pets[obj[petKeyIndex]].pet = false //Set to false so pet can be feed again for triad.
 			feedPetList += '\n\u2022  ' + obj[petNameIndex]  
 		}	
 		postFeedPetCompleted()
@@ -1583,17 +1596,18 @@ function parseData() {
 
 	function renderFormattedText(text, options) {
 		var md = window.habiticaMarkdown;
-		
-		if (exportFormats[exportFormat].convertMarkup) text = md.render(text);
-		if (exportFormats[exportFormat].removeHtml) text = $(text).text();
-		if (exportFormats[exportFormat].convertLineBreaks) text = text.replace(/(?:\r\n|\r|\n)/g, '<br />');
-		if (options && options.removeParaTags) {
-            text = String(text).replace(/^<p>|<\/p>\n$/g, '');
-        }
-        else if (options && options.setParaClass) {
-            text = String(text).replace(/<p>/g,
-                       '<p class="' + options.setParaClass + '">');
-        }
+		if (text != undefined) {
+			if (exportFormats[exportFormat].convertMarkup) text = md.render(text);
+			if (exportFormats[exportFormat].removeHtml) text = $(text).text();
+			if (exportFormats[exportFormat].convertLineBreaks) text = text.replace(/(?:\r\n|\r|\n)/g, '<br />');
+			if (options && options.removeParaTags) {
+				text = String(text).replace(/^<p>|<\/p>\n$/g, '');
+			}
+			else if (options && options.setParaClass) {
+				text = String(text).replace(/<p>/g,
+						   '<p class="' + options.setParaClass + '">');
+			}
+		}
 		return text;
 	}
 	
@@ -2005,7 +2019,9 @@ function parseData() {
 					eggs[index].feedStats.petFeedCount = 0
 					eggs[index].feedStats.mountCount = 0
 					eggs[index].feedStats.petNoFeedCount = 0
-
+					eggs[index].feedStats.hatchSpaceCount = 0
+					eggs[index].feedStats.allPetsFed = false
+					eggs[index].feedStats.petFeedList = ''
 					
 					if (content.dropEggs[index] != undefined) {
 						triadBingoRequirement['egg_' + index] = {imgTag: eggs[index].imgTag, key: index, category: 'egg', text: eggs[index].text + ' Egg', require: 20, need: 20, have: 0, missing: 999} //have and missing filled out later
@@ -2114,8 +2130,8 @@ function parseData() {
 								potions[pets[index].potion].feedStats.petFeedCount++
 								user.feedStats.petFeedCount++
 								if (obj.type == 'drop') user.feedStats.petFeedBaseCount++	
-								if (pets[index].canHatch == 'true' ) pets[index].canHatch = 'After Fed'
-							} else {
+								if (pets[index].canHatch == 'true' ) pets[index].canHatch = 'Once Fed'
+								if (obj.type != 'premium') eggs[pets[index].egg].feedStats.petFeedList += pets[index].potion + ' '					} else {
 								pets[index].pet = false
 							}
 							if (obj.type == 'premium') {
@@ -2164,7 +2180,7 @@ function parseData() {
 								triadBingoRequirement['potion_' + pets[index].potion].require -= 1
 							}
 						}
-					}				
+					}
 					
 				} else {
 					if (user.items.pets[index] > 0) user.feedStats.petRareCount++
@@ -2211,6 +2227,8 @@ function parseData() {
 			////   Eggs										  ////////////
 			//////////////////////////////////////////////////////////////
 			$.each(eggs, function(index, obj){
+				obj.feedStats.hatchSpaceCount = 10 - obj.feedStats.petNoFeedCount - obj.feedStats.petFeedCount  
+				if (obj.feedStats.petNoFeedCount == 10) obj.feedStats.allPetsFed = true
 				
 				$.each(sectionsToDisplay, function(index2, obj2){
 					if (obj2.type == 'sectionTable' ) {
@@ -2305,7 +2323,7 @@ function parseData() {
 				if (obj.have < obj.require ) {
 					missingItem = true;
 				}
-				obj.missing = obj.need - obj.have
+				obj.missing = obj.require - obj.have
 				
 				if (missingItem) {
 					canTriadBingo = false;
@@ -2868,7 +2886,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.2)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.3)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -2882,7 +2900,6 @@ ul#tableOfContents > li {
     <div class="bad hide">
         <p>There was an error obtaining your data.</p>
         <ul class="padded">
-			<li>Check your group id is either "party" or Guild Id which is a string of characters similar to your UID. The Guild ID appears at the end of the URL. Eg. 2ff9822b-27f2-4774-98da-db349b57a38e</li>
             <li>Please reload the page and then check that your <a href="https://habitica.com/#/options/settings/api">User ID and API Token</a> are correct.</li>
             <li>If you're using Internet Explorer, try another browser. <a href="https://www.google.com/intl/en/chrome/browser/">Chrome</a> or <a href="https://www.mozilla.org/en-US/firefox/new/">Firefox</a> will be more reliable.</li>
             <li>If the page's URL starts with "http://" change it to start with "https://" (or just use <a href="https://oldgods.net/habitica/cTheDragons/feed.html">this correct link</a>).</li>
@@ -2900,12 +2917,38 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>1.3 - Spread It Out Evenly<span class="date">2017-08-19</span></dt>
+        <dd><ul>
+		     <li>Features:
+                <ul>
+					<li>Feeding Magic Potion Pets now feed evenly based on the most food type (potion type).</li>
+					<li>Remove description from Selling error. (Unable to easily just select eggs etc and information was not useful).</li>
+					<li>Show all Sell buttons on top line.</li>
+					<li>Create new columns in Eggs to determine if all Pets are generated, how many hatching spaces and what potion types can be fed. (Columns are not auto-show to avoid issues).</li>
+				</ul> 
+            </li>
+	        <li>Documentation:
+                <ul>
+					<li>After Fed => Once Fed for better sorting.</li>
+					<li>Removed information about guilds when unable to fetch user information (Bad Login)</li>
+                </ul>
+            </li>		
+	        <li>Bug Fixes:
+                <ul>
+					<li>Remove error that pet can't be fed when completing triad Bingo without all the items.</li>
+					<li>Re-Fetch button doesn't disable when completing triad.</li>
+					<li>Required / Missing totals are now correct in Triad Bingo section.</li>
+					<li>Better handling of null strings with markdown.</li>
+					<li>Incorrect User Id/API does not include confusing error message about guilds.</li>
+				</ul>
+            </li>
+		</ul></dd>		
 		<dt>1.2 - We can wait without the errors<span class="date">2017-08-05</span></dt>
         <dd><ul>	
 	        <li>Bug Fixes:
                 <ul>
-					<li>Removing the error for no pet when Triad Bingo button is used.</li>
-					<li>Typo responses.</li>
+					<li>Removing the error for no pet when Triad Bingo button is used.  (Thanks @Il Mago Arancione for finding this)</li>
+					<li>Typo responses.  (Thanks @katzalina for finding this).</li>
                </ul>
             </li>
 		</ul></dd>	
@@ -3049,6 +3092,7 @@ ul#tableOfContents > li {
 		</ul>		
 		<h2>Possible Future Features</h2>
 		<ul>
+			<li>Column Filtering (as opposed to single search box)</li>
 			<li><span class="subheading">Other Stuff?</span>: Send me ideas! Contact details are below.</li>
 		</ul>
 
