@@ -826,7 +826,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		//get UniqueRows
 		for(var i = 0; i < rowData.length; i++) {
 			//Check if can feed pet first
-			if  ((noPromptToFeed) || ((pets[rowData[i][petKeyIndex]].pet == true) && (pets[rowData[i][petKeyIndex]].foodAvail > 0))) {
+			if  ((noPromptToFeed) || ((pets[rowData[i][petKeyIndex]].pet == true) && ((pets[rowData[i][petKeyIndex]].foodAvail > 0 || foodKeyIndex != undefined )))) {
 				notInLoop = true
 				
 				for(var j = 0; j < loopList.length; j++) {
@@ -2135,9 +2135,11 @@ function parseData() {
 								user.feedStats.petFeedCount++
 								if (obj.type == 'drop') user.feedStats.petFeedBaseCount++	
 								if (pets[index].canHatch == 'true' ) pets[index].canHatch = 'Once Fed'
-								if (obj.type != 'premium') eggs[pets[index].egg].feedStats.petFeedList += pets[index].potion + ' '					} else {
+								if (obj.type != 'premium') eggs[pets[index].egg].feedStats.petFeedList += ', ' + potions[pets[index].potion].text 
+							} else {
 								pets[index].pet = false
 							}
+							
 							if (obj.type == 'premium') {
 								pets[index].foodAvail = user.feedStats.food.all
 							} else {
@@ -2233,6 +2235,7 @@ function parseData() {
 			$.each(eggs, function(index, obj){
 				obj.feedStats.hatchSpaceCount = 10 - obj.feedStats.petNoFeedCount - obj.feedStats.petFeedCount  
 				if (obj.feedStats.petNoFeedCount == 10) obj.feedStats.allPetsFed = true
+				if (obj.feedStats.petFeedList != '') obj.feedStats.petFeedList = obj.feedStats.petFeedList.substring(2)
 				
 				$.each(sectionsToDisplay, function(index2, obj2){
 					if (obj2.type == 'sectionTable' ) {
@@ -2890,7 +2893,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.4)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.5)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -2921,6 +2924,19 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>1.5 - Force Feed<span class="date">2017-08-27</span></dt>
+        <dd><ul>
+	        <li>Documentation:
+                <ul>
+					<li>Added names, not keys to Pet Feed List. Added commas.</li>
+                </ul>
+            </li>		
+	        <li>Bug Fixes:
+                <ul>
+					<li>"Manual feed" pets even if no ideal food is available. (Thanks @Il Mago)</li>
+				</ul>
+            </li>
+		</ul></dd>		
 		<dt>1.4 - Surely I will win this Triad Bingo war<span class="date">2017-08-20</span></dt>
         <dd><ul>
 	        <li>Bug Fixes:
