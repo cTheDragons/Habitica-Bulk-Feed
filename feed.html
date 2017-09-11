@@ -1802,25 +1802,6 @@ function parseData() {
 			
 			return returnButtons
 		}
-		
-		function transformButton() {
-			var returnButton = [{
-				extend: 'collection',
-				text: 'Transform',
-				buttons: [{
-					text: 'Snowball',
-					action: function ( e, dt, node, config ) {
-						var rowData = sectionTables[dataSetSectionId].table.rows( { selected: true } ).data().toArray();
-						var uuidIndex = sectionTables[dataSetSectionId].uuidIndex;
-						postTransformMember('Snowball', rowData, uuidIndex)
-						
-					}
-				}],
-				autoClose: true
-			}]
-			
-			return returnButton
-		}
 	}
 	
 	
