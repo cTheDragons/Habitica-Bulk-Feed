@@ -350,8 +350,8 @@ var serverUrl					= 'https://habitica.com/api/v3';
 var serverPathContent			= '/content?language=en';
 var serverPathUser				= '/user';
 var serverPathFeedPet			= '/user/feed'
-var serverPathHatchPet			= '/user/hatch/'
-var serverPathSellItem			= '/user/sell/'
+var serverPathHatchPet			= '/user/hatch'
+var serverPathSellItem			= '/user/sell'
 var imageURL					= 'https://habitica-assets.s3.amazonaws.com/mobileApp/images/' 
 var imageShopPrefix             =  'shop_'
 var imageStableFood             =  'Pet_Food_'
@@ -2874,7 +2874,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.5)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.6)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -2905,6 +2905,14 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>1.6 - Odd Bug<span class="date">2017-09-16</span></dt>
+        <dd><ul>
+	        <li>Bug Fixes:
+                <ul>
+					<li>Fix unable to sell or hatch items due extra "/"</li>
+				</ul>
+            </li>
+		</ul></dd>
 		<dt>1.5 - Force Feed<span class="date">2017-08-27</span></dt>
         <dd><ul>
 	        <li>Documentation:
