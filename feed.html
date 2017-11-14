@@ -203,9 +203,10 @@ sectionTables['triadBingoRequirement'] = {
 			html += '<p><input class="div-triadBingo" id="triadBingo" type="submit" value="Yes! Hatch and Feed all for Triad Bingo" /></p>'
 		} else if (sectionTables['triadBingoRequirement'].dataSet.length > 0) {
 			html += '<p>Listed below are the items missing to complete Triad Bingo. Keep collecting! Once collected return here to bulk hatch and feed.</p>'
-			html += '<p><input class="div-triadBingo" id="triadBingo" type="submit" value="I cannot wait! Hatch and feed my Base (Gen 1) pets as much as possible." /></p>'
+			html += '<p><input class="div-triadBingo" id="triadBingo" type="submit" value="I cannot wait! Hatch and feed my Standard (Gen 1) pets as much as possible." /></p>'
 		} else {
 			html += '<p>You have Triad Bingo!</p>'
+			html += '<p><input class="div-releaseTriadBingo" id="releaseTriadBingo" type="submit" value="Again! Again! Release all my Standard (Gen 1) pets and mounts and go for Triad Bingo Again!" /></p>'
 		}
 
 		return html 		
@@ -269,8 +270,8 @@ sectionTables['eggs'] = {
 	dataSetHeader: ['', 'Key', 'Name', 'Type', 'Egg Count', 'Not Hatched',  'Pets To Feed', 'Mounts', 'ReGen Pets', 'All Pets Fed?', 'HatchSpaces', 'Pet Feed List'], 
 	dataTable: ['imgTag', 'key', 'text', 'feedStats.type', 'total', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount', 'feedStats.allPetsFed', 'feedStats.hatchSpaceCount', 'feedStats.petFeedList'],
 	babyBear: {show: [2,4], orderBy: [[2, 'asc']]},
-	mamaBear: {show: [2,3,4], orderBy: [[2, 'asc']]},
-	papaBear: {show: [0,2,3,4,5,6,7,8], orderBy: [[2, 'asc']]},
+	mamaBear: {show: [2,3,4,10], orderBy: [[2, 'asc']]},
+	papaBear: {show: [0,2,3,4,5,6,7,8,9,10,11], orderBy: [[2, 'asc']]},
 	extraColumnDefs: [{'className': 'dt-center', 'targets': [9]}, {'className': 'dt-right', 'targets': [4,5,6,7,8,10]}],
 	subTitle: function (){
 		var html = ''
@@ -352,6 +353,7 @@ var serverPathUser				= '/user';
 var serverPathFeedPet			= '/user/feed'
 var serverPathHatchPet			= '/user/hatch'
 var serverPathSellItem			= '/user/sell'
+var serverReleaseAllPets		= '/user/release-both'
 var imageURL					= 'https://habitica-assets.s3.amazonaws.com/mobileApp/images/' 
 var imageShopPrefix             =  'shop_'
 var imageStableFood             =  'Pet_Food_'
@@ -440,7 +442,10 @@ if (debug) console.log('debug enableShowHideToggling');
 		$(this).attr('disabled','disabled');
 		triadBingoHatchFeedPet()
 	});
-	
+	$('body').on('click', '.div-releaseTriadBingo', function(event){
+		$(this).attr('disabled','disabled');
+		postReleaseTriadBingo()
+	});	
 	
 	function getExportOptionsHtml()
 	{
@@ -1153,6 +1158,71 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 
 
 //////////////////////////////////////////////////////////////////////
+////  Release Triad Bingo		   	    //////////////////////////////
+//////////////////////////////////////////////////////////////////////
+function postReleaseTriadBingo() {
+	if (debug) console.log('debug postReleaseTriadBingo start');
+	var actionLogId = 'ReleaseTriadBingo'
+	
+	if (confirm('Do you wish to release all your Standard (Gen 1) Pets and Mounts?')){
+		postNextReleaseTriadBingo()
+	} else {
+		alert('Action cancelled')
+		return;
+	}
+	
+
+	//This is done like this as receive ERR_INCOMPLETE_CHUNKED_ENCODING
+	function postNextReleaseTriadBingo(){
+		$('#posting .good').show();
+		
+		urlToPost = serverUrl + serverReleaseAllPets
+		if (debugShowObject) console.log(urlToPost);
+		$('#posting #statusPost').text('Releasing all Standard (Gen 1) Pets & Mounts' );
+		$.ajax({
+			url: urlToPost,
+			type: 'POST',
+			contentType: 'application/json',
+			dataType: 'json',
+			cache: false,
+			beforeSend: function(xhr){
+					xhr.setRequestHeader('x-api-user', userId);
+					xhr.setRequestHeader('x-api-key',  apiToken);
+				},
+			success: postReleaseTriadBingoSuccess,
+			error: postReleaseTriadBingoFailure
+		});		
+	}
+		
+
+	
+	function postReleaseTriadBingoFailure(data){
+		if (debug) console.log('debug postReleaseTriadBingoFailure start');
+		if (debugShowObject) console.log(data);
+		var errData = data;
+		createActionLog(actionLogId, true, errData.responseJSON.message);
+		alert('ERROR WITH Release Triad Bingo \n\n' + errData.responseJSON.error + '\n' + errData.responseJSON.message  + '\n\nPlease refetch your data and try again.');	
+		
+		$('#posting .good').hide();		
+		fetchData()
+	}
+
+
+	function postReleaseTriadBingoSuccess(data){
+		if (debug) console.log('debug postReleaseTriadBingoSuccess start');
+		if (debugShowObject) console.log(data);
+		createActionLog(actionLogId, true, data.message);
+		alert('All Standard (Gen 1) Pets & Mounts have been released.\n\nYour data will now be refreshed.')
+		
+		$('#posting .good').hide();
+		fetchData() 
+	}
+	
+
+}
+
+
+//////////////////////////////////////////////////////////////////////
 ////  Manual Feed Pet				      //////////////////////////////
 //////////////////////////////////////////////////////////////////////
 function manualFeedPet(rowData, petKeyIndex, petNameIndex, foodKey) {
@@ -1222,6 +1292,7 @@ function manualFeedPet(rowData, petKeyIndex, petNameIndex, foodKey) {
 }
 
 
+
 //////////////////////////////////////////////////////////////////////
 ////  Triad Bingo			     		 //////////////////////////////
 //////////////////////////////////////////////////////////////////////
@@ -1234,7 +1305,7 @@ function triadBingoHatchFeedPet() {
 	multiStep = 0
 	
 	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?\n\nYou may want to get a drink, or do some tasks as this will take a while. (Estimated over 20 minutes).'
-	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Base (Gen 1) pets as much as possible?\n\nYou may want to get a drink, or do some tasks as this will take a while. (Can be over 20 minutes).' 
+	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Standard (Gen 1) pets as much as possible?\n\nYou may want to get a drink, or do some tasks as this will take a while. (Can be over 20 minutes).' 
 	
 	if (confirm(confirmMsg)) {
 
@@ -1270,6 +1341,7 @@ function triadBingoHatchFeedPet() {
 		multiStepNextAction()
 	} else {
 		$('.div-triadBingo').removeAttr('disabled');
+		$('.div-releaseTriadBingo').removeAttr('disabled');
 		$('#refetch').removeAttr('disabled');
 	}
 }
@@ -1923,7 +1995,7 @@ function parseData() {
 			//arrays to construct stuff because I like altering things in one place than trailing through code... (Didn't do too well with this section).	
 			var foodTarget = {Base: 'Meat', CottonCandyBlue: 'CottonCandyBlue', CottonCandyPink: 'CottonCandyPink', Desert: 'Potatoe', Golden: 'Honey', Red: 'Strawberry', Shade: 'Chocolate', Skeleton: 'Fish', White: 'Milk', Zombie: 'RottenMeat'}
 
-			var petTypes = {drop: 'Base (Gen1)', premium: 'Magic Potion', quest: 'Quest', special: 'Rare' } 
+			var petTypes = {drop: 'Standard (Gen1)', premium: 'Magic Potion', quest: 'Quest', special: 'Rare' } 
 			
 			///////////////////////////////////////////////////////////////
 			////   Single   Data                              ////////////
@@ -2082,7 +2154,7 @@ function parseData() {
 					if (obj.type != 'premium') if (sellItems['egg_' + pets[index].egg] != undefined) sellItems['egg_' + pets[index].egg].type = obj.typePretty
 					
 					//Does User have Pet & Mount?
-					if (user.items.pets[index] != undefined) {
+					if (user.items.pets[index] != undefined && user.items.pets[index] != 0) {
 						if (user.items.mounts[index] == true) {
 							pets[index].mount = true
 							user.feedStats.mountCount++
@@ -2128,19 +2200,19 @@ function parseData() {
 							}
 						}
 					} else {
-							pets[index].feedValue = 0
-							pets[index].mount = false
-							pets[index].pet = false
-							if (obj.type != 'premium') eggs[pets[index].egg].feedStats.notHatchCount++
-							potions[pets[index].potion].feedStats.notHatchCount++
-							user.feedStats.notHatchCount++
-							if (obj.type == 'drop') user.feedStats.notHatchBaseCount++	
+						pets[index].feedValue = 0
+						pets[index].mount = false
+						pets[index].pet = false
+						if (obj.type != 'premium') eggs[pets[index].egg].feedStats.notHatchCount++
+						potions[pets[index].potion].feedStats.notHatchCount++
+						user.feedStats.notHatchCount++
+						if (obj.type == 'drop') user.feedStats.notHatchBaseCount++	
 
-							if (obj.type == 'premium') {
-								pets[index].foodAvail = user.feedStats.food.all
-							} else {
-								pets[index].foodAvail = user.feedStats.food[obj.potion]
-							}
+						if (obj.type == 'premium') {
+							pets[index].foodAvail = user.feedStats.food.all
+						} else {
+							pets[index].foodAvail = user.feedStats.food[obj.potion]
+						}
 					}
 
 					//triad Bingo
@@ -2783,6 +2855,9 @@ h2 {
     float: left;
     width: 30em;
 }
+#userApiDetailsForm input[type="checkbox"] {
+    width: auto;
+}
 #userApiDetailsForm fieldset p {
     clear: both;
 }
@@ -2874,7 +2949,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.6)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.7)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -2888,7 +2963,7 @@ ul#tableOfContents > li {
     <div class="bad hide">
         <p>There was an error obtaining your data.</p>
         <ul class="padded">
-            <li>Please reload the page and then check that your <a href="https://habitica.com/#/options/settings/api">User ID and API Token</a> are correct.</li>
+            <li>Please reload the page and then check that your <a href="https://habitica.com/user/settings/api">User ID and API Token</a> are correct.</li>
             <li>If you're using Internet Explorer, try another browser. <a href="https://www.google.com/intl/en/chrome/browser/">Chrome</a> or <a href="https://www.mozilla.org/en-US/firefox/new/">Firefox</a> will be more reliable.</li>
             <li>If the page's URL starts with "http://" change it to start with "https://" (or just use <a href="https://oldgods.net/habitica/cTheDragons/feed.html">this correct link</a>).</li>
             <li>If neither of those help, contact me! See <strong>"Help and Contact Details"</strong> at the bottom of this page.</li>
@@ -2905,6 +2980,29 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>1.7 - Be Free My Pretty Ones!<span class="date">2017-11-14</span></dt>
+        <dd><ul>
+	            <li>Features:
+                <ul>
+					<li>Added Release Triad Bingo Button.</li>
+					<li>Showing All Pets Fed, Hatch Spaces and Pet Feed List.</li>
+					<li>Updating URL to new website format.</li>
+					<li>Better error with POST functions handling.</li>
+				</ul> 
+            </li>
+	        <li>Documentation:
+                <ul>
+					<li>Clean up of code.</li>
+					<li>Minor fixes to formatting of check boxes.</li>
+					<li>Rename to Standard to match new naming convention for Gen 1 Pets</li>
+                </ul>
+            </li>		
+	        <li>Bug Fixes:
+                <ul>
+					<li>Not Hatched totals are now corrected for Released Gen 1 Pets</li>
+               </ul>
+            </li>
+		</ul></dd>		
 		<dt>1.6 - Odd Bug<span class="date">2017-09-16</span></dt>
         <dd><ul>
 	        <li>Bug Fixes:
@@ -3063,7 +3161,7 @@ ul#tableOfContents > li {
     <form id="userApiDetailsForm" method="POST" action="" target="formPasswdSaveFix">
         <fieldset>
             <legend><span class="highlight">Enter your Habitica API details</span>
-            (from the <a href="https://habitica.com/#/options/settings/api">Settings
+            (from the <a href="https://habitica.com/user/settings/api">Settings
              -&gt; API page</a>)
             </legend>
             <label for="userId"><span>User ID</span>
@@ -3121,12 +3219,12 @@ ul#tableOfContents > li {
 		<p>Regardless of what bugs there might be, the only changes that could result in any changes being made on your Habitica account are with Pets, Mounts, Food, Potions and Eggs.</p>
 
 		<h2>Thank You!</h2>
-		<p>Thank you to @Alys & Ryan for their code which this is based. Thank you to the brave and mighty testers in the <a href="https://habitica.com/#/options/groups/guilds/d9a0ec1e-352b-4697-a5d5-fb45c98fb4a3">Testing & Bug Squashing for Dragon Tools</a>; your willingness to dive into the murky waters of beta testing makes these tools better.<p> 
+		<p>Thank you to @Alys & Ryan for their code which this is based. Thank you to the brave and mighty testers in the <a href="https://habitica.com/groups/guild/d9a0ec1e-352b-4697-a5d5-fb45c98fb4a3">Testing & Bug Squashing for Dragon Tools</a>; your willingness to dive into the murky waters of beta testing makes these tools better.<p> 
 
 		<h2>Help and Contact Details</h2>
-		<p>This page has been created by <a href="http://habitica.wikia.com/wiki/User:CTheDragons">cTheDragons</a>. If you have questions, problems, or suggestions, you're welcome to contact me, although I cannot guarantee that I'll always be able to spend a lot of time on this. You can contact me at <a href="https://habitica.com/#/options/groups/guilds/d9a0ec1e-352b-4697-a5d5-fb45c98fb4a3">Testing & Bug Squashing for Dragon Tools</a>. I tend to ignore emails & PMs.</p>
-		<p>Code can be source at  <a href="https://github.com/cTheDragons/Habitica-Bulk-Feed">Github<a>. Contributions are welcome. As already stated, any issues please report to  <a href="https://habitica.com/#/options/groups/guilds/d9a0ec1e-352b-4697-a5d5-fb45c98fb4a3">Testing & Bug Squashing for Dragon Tools</a> for a faster response and to avoid duplication. </p>
-		<p>If you have general questions about Habitica, post them to <a href="https://habitica.com/#/options/groups/tavern">Tavern</a> or <a href="https://habitica.com/#/options/groups/guilds/5481ccf3-5d2d-48a9-a871-70a7380cee5a">Habitica Help: Ask a Question Guild</a>.</p>
+		<p>This page has been created by <a href="http://habitica.wikia.com/wiki/User:CTheDragons">cTheDragons</a>. If you have questions, problems, or suggestions, you're welcome to contact me, although I cannot guarantee that I'll always be able to spend a lot of time on this. You can contact me at <a href="https://habitica.com/groups/guild/d9a0ec1e-352b-4697-a5d5-fb45c98fb4a3">Testing & Bug Squashing for Dragon Tools</a>. I tend to ignore emails & PMs.</p>
+		<p>Code can be source at  <a href="https://github.com/cTheDragons/Habitica-Bulk-Feed">Github<a>. Contributions are welcome. As already stated, any issues please report to  <a href="https://habitica.com/groups/guild/d9a0ec1e-352b-4697-a5d5-fb45c98fb4a3">Testing & Bug Squashing for Dragon Tools</a> for a faster response and to avoid duplication. </p>
+		<p>If you have general questions about Habitica, post them to <a href="https://habitica.com/groups/tavern">Tavern</a> or <a href="https://habitica.com/groups/guild/5481ccf3-5d2d-48a9-a871-70a7380cee5a">Habitica Help: Ask a Question Guild</a>.</p>
     </div>
 	
 	<div id="documentationAndFormClose" class="showHideToggle closer" data-target="documentationAndForm" data-resettoggletext="documentationAndFormToggle">hide documentation / options</div>
