@@ -284,12 +284,12 @@ sectionTables['eggs'] = {
 sectionTables['potions'] = {
 	type: 'potions',
 	dataSet: [], 
-	dataSetHeader: ['', 'Key', 'Name', 'Magic Potion?', 'Potion Count', 'Food Available', 'Not Hatched', 'Pets To Feed', 'Mounts', 'ReGen Pets'], 
-	dataTable: ['imgTag', 'key', 'text', 'premium', 'total', 'foodAvail', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount'],
-	babyBear: {show: [2,4], orderBy: [[2, 'asc']]},
-	mamaBear: {show: [0,2,3,4], orderBy: [[2, 'asc']]},
-	papaBear: {show: [0,2,3,4,5,6,7,8,9], orderBy: [[2, 'asc']]},
-	extraColumnDefs: [{'className': 'dt-center', 'targets': [3]}, {'className': 'dt-right', 'targets': [4,5,6,7,8,9]}],
+	dataSetHeader: ['', 'Key', 'Name', 'Magic Potion?', 'Wacky?', 'Potion Count', 'Food Available', 'Not Hatched', 'Pets To Feed', 'Mounts', 'ReGen Pets'], 
+	dataTable: ['imgTag', 'key', 'text', 'premium', 'wacky', 'total', 'foodAvail', 'feedStats.notHatchCount', 'feedStats.petFeedCount', 'feedStats.mountCount', 'feedStats.petNoFeedCount'],
+	babyBear: {show: [2,5], orderBy: [[2, 'asc']]},
+	mamaBear: {show: [0,2,3,5], orderBy: [[2, 'asc']]},
+	papaBear: {show: [0,2,3,4,5,6,7,8,9,10], orderBy: [[2, 'asc']]},
+	extraColumnDefs: [{'className': 'dt-center', 'targets': [3,4]}, {'className': 'dt-right', 'targets': [5,6,7,8,9,10]}],
 	subTitle: function (){
 		var html = ''
 		return html 		
@@ -362,6 +362,9 @@ var imageStablePotion           =  'Pet_HatchingPotion_'
 var imageStablePet		        =  'Pet-'
 var imageFileSuffix				= '.png'
 
+var baseTimeoutPeriod			= 5000 // 5 seconds
+var baseTimeoutPeriodLong		= 30000 // 30 seconds
+var clientId					= 'bc10ec41-4213-4482-bbb8-558e3c3ea8d5-BulkFeed'
 var userId						= '';
 var apiToken					= '';
 var showImage					= false;
@@ -606,7 +609,8 @@ function fetchData() {
         dataType: 'json',
         cache: false,
         beforeSend: function(xhr){
-                xhr.setRequestHeader('x-api-user', userId);
+                xhr.setRequestHeader('x-client', clientId);
+				xhr.setRequestHeader('x-api-user', userId);
                 xhr.setRequestHeader('x-api-key',  apiToken);
             },
         success: fetchUserSuccess,
@@ -772,6 +776,7 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 					dataType: 'json',
 					cache: false,
 					beforeSend: function(xhr){
+							xhr.setRequestHeader('x-client', clientId);
 							xhr.setRequestHeader('x-api-user', userId);
 							xhr.setRequestHeader('x-api-key',  apiToken);
 						},
@@ -830,7 +835,9 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 				fetchData() 
 			}
 		} else {
-			postNextHatchPet()
+			setTimeout(function(){
+				postNextHatchPet()
+			}, baseTimeoutPeriod)
 		}		
 	
 	}
@@ -861,7 +868,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		//get UniqueRows
 		for(var i = 0; i < rowData.length; i++) {
 			//Check if can feed pet first
-			if  ((noPromptToFeed) || ((pets[rowData[i][petKeyIndex]].pet == true) && ((pets[rowData[i][petKeyIndex]].foodAvail > 0 || foodKeyIndex != undefined )))) {
+			if  ((noPromptToFeed) || ((pets[rowData[i][petKeyIndex]].pet == true) && ((pets[rowData[i][petKeyIndex]].foodAvail > 0 || foodKeyIndex != undefined ))) && (pets[rowData[i][petKeyIndex]].type != 'wacky') ) {
 				notInLoop = true
 				
 				for(var j = 0; j < loopList.length; j++) {
@@ -961,6 +968,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 					dataType: 'json',
 					cache: false,
 					beforeSend: function(xhr){
+							xhr.setRequestHeader('x-client', clientId);
 							xhr.setRequestHeader('x-api-user', userId);
 							xhr.setRequestHeader('x-api-key',  apiToken);
 						},
@@ -1023,7 +1031,9 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 				fetchData() 
 			}
 		} else {
-			postNextFeedPet()
+			setTimeout(function(){
+				postNextFeedPet()
+			}, baseTimeoutPeriod)
 		}		
 	
 	}
@@ -1127,6 +1137,7 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 				dataType: 'json',
 				cache: false,
 				beforeSend: function(xhr){
+						xhr.setRequestHeader('x-client', clientId);
 						xhr.setRequestHeader('x-api-user', userId);
 						xhr.setRequestHeader('x-api-key',  apiToken);
 					},
@@ -1180,7 +1191,9 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 				fetchData() 
 			}
 		} else {
-			postNextSellItem()
+			setTimeout(function(){
+				postNextSellItem()
+			}, baseTimeoutPeriod)
 		}		
 	
 	}
@@ -1216,8 +1229,9 @@ function postReleaseTriadBingo() {
 			dataType: 'json',
 			cache: false,
 			beforeSend: function(xhr){
+					xhr.setRequestHeader('x-client', clientId);
 					xhr.setRequestHeader('x-api-user', userId);
-					xhr.setRequestHeader('x-api-key',  apiToken);
+					xhr.setRequestHeader('x-api-key',  apiToken);					
 				},
 			success: postReleaseTriadBingoSuccess,
 			error: postReleaseTriadBingoFailure
@@ -2025,7 +2039,7 @@ function parseData() {
 			//arrays to construct stuff because I like altering things in one place than trailing through code... (Didn't do too well with this section).	
 			var foodTarget = {Base: 'Meat', CottonCandyBlue: 'CottonCandyBlue', CottonCandyPink: 'CottonCandyPink', Desert: 'Potatoe', Golden: 'Honey', Red: 'Strawberry', Shade: 'Chocolate', Skeleton: 'Fish', White: 'Milk', Zombie: 'RottenMeat'}
 
-			var petTypes = {drop: 'Standard (Gen1)', premium: 'Magic Potion', quest: 'Quest', special: 'Rare' } 
+			var petTypes = {drop: 'Standard (Gen1)', premium: 'Magic Potion', quest: 'Quest', special: 'Rare', wacky: 'Wacky' } 
 			
 			///////////////////////////////////////////////////////////////
 			////   Single   Data                              ////////////
@@ -2125,10 +2139,12 @@ function parseData() {
 						potions[index].imgTag = ''
 					}
 
+					if (potions[index].wacky == undefined) potions[index].wacky = false //not always set in the data.
 					if (potions[index].premium == true) {
 						typePotion = 'Magic Potion' 
-					}
-					else { 
+					} else if (potions[index].wacky == true) {
+						typePotion = 'Wacky' 
+					} else { 
 						typePotion = petTypes['drop']
 					}
 
@@ -2150,6 +2166,8 @@ function parseData() {
 
 					if (potions[index].premium == true) {
 						potions[index].foodAvail = user.feedStats.food.all
+					} else if (potions[index].wacky == true) {
+						potions[index].foodAvail = ''
 					} else {
 						potions[index].foodAvail = user.feedStats.food[index]
 					}
@@ -2178,10 +2196,10 @@ function parseData() {
 					pets[index].canHatch = 'false' //will be altered throughout if statements if required
 					if ((eggs[pets[index].egg].total > 0 ) && (potions[pets[index].potion].total > 0)) pets[index].canHatch = 'true'
 					
-					if (obj.type != 'premium') eggs[pets[index].egg].feedStats.count++
+					if ((obj.type != 'premium') && (obj.type != 'wacky')) eggs[pets[index].egg].feedStats.count++
 					potions[pets[index].potion].feedStats.count++
-					if (obj.type != 'premium') eggs[pets[index].egg].feedStats.type = obj.typePretty
-					if (obj.type != 'premium') if (sellItems['egg_' + pets[index].egg] != undefined) sellItems['egg_' + pets[index].egg].type = obj.typePretty
+					if ((obj.type != 'premium') && (obj.type != 'wacky')) eggs[pets[index].egg].feedStats.type = obj.typePretty
+					if ((obj.type != 'premium') && (obj.type != 'wacky')) if (sellItems['egg_' + pets[index].egg] != undefined) sellItems['egg_' + pets[index].egg].type = obj.typePretty
 					
 					//Does User have Pet & Mount?
 					if (user.items.pets[index] != undefined && user.items.pets[index] != 0) {
@@ -2189,14 +2207,14 @@ function parseData() {
 							pets[index].mount = true
 							user.feedStats.mountCount++
 							if (obj.type == 'drop') user.feedStats.mountBaseCount++
-							if (obj.type != 'premium') eggs[pets[index].egg].feedStats.mountCount++
+							if ((obj.type != 'premium') && (obj.type != 'wacky'))  eggs[pets[index].egg].feedStats.mountCount++
 							potions[pets[index].potion].feedStats.mountCount++
 						
 							pets[index].feedValue = 0
 							if (user.items.pets[index] > 0) {
 								pets[index].pet = true
 								pets[index].canHatch = '-N/R-'
-								if (obj.type != 'premium') eggs[pets[index].egg].feedStats.petNoFeedCount++
+								if ((obj.type != 'premium') && (obj.type != 'wacky'))  eggs[pets[index].egg].feedStats.petNoFeedCount++
 								potions[pets[index].potion].feedStats.petNoFeedCount++
 								user.feedStats.petNoFeedCount++
 								if (obj.type == 'drop') user.feedStats.petNoFeedBaseCount++
@@ -2213,18 +2231,20 @@ function parseData() {
 							pets[index].feedValue = user.items.pets[index] * 2 / 10
 							if (user.items.pets[index] > 0) {
 								pets[index].pet = true
-								if (obj.type != 'premium') eggs[pets[index].egg].feedStats.petFeedCount++
+								if ((obj.type != 'premium') && (obj.type != 'wacky'))  eggs[pets[index].egg].feedStats.petFeedCount++
 								potions[pets[index].potion].feedStats.petFeedCount++
 								user.feedStats.petFeedCount++
 								if (obj.type == 'drop') user.feedStats.petFeedBaseCount++	
 								if (pets[index].canHatch == 'true' ) pets[index].canHatch = 'Once Fed'
-								if (obj.type != 'premium') eggs[pets[index].egg].feedStats.petFeedList += ', ' + potions[pets[index].potion].text 
+								if ((obj.type != 'premium') && (obj.type != 'wacky'))  eggs[pets[index].egg].feedStats.petFeedList += ', ' + potions[pets[index].potion].text 
 							} else {
 								pets[index].pet = false
 							}
 							
 							if (obj.type == 'premium') {
 								pets[index].foodAvail = user.feedStats.food.all
+							} else if (obj.type == 'wacky') {
+								pets[index].foodAvail = undefined
 							} else {
 								pets[index].foodAvail = user.feedStats.food[obj.potion]
 							}
@@ -2233,17 +2253,27 @@ function parseData() {
 						pets[index].feedValue = 0
 						pets[index].mount = false
 						pets[index].pet = false
-						if (obj.type != 'premium') eggs[pets[index].egg].feedStats.notHatchCount++
+						if ((obj.type != 'premium') && (obj.type != 'wacky'))  eggs[pets[index].egg].feedStats.notHatchCount++
 						potions[pets[index].potion].feedStats.notHatchCount++
 						user.feedStats.notHatchCount++
 						if (obj.type == 'drop') user.feedStats.notHatchBaseCount++	
 
 						if (obj.type == 'premium') {
 							pets[index].foodAvail = user.feedStats.food.all
+						} else if (obj.type == 'wacky') {
+							pets[index].foodAvail = undefined
 						} else {
 							pets[index].foodAvail = user.feedStats.food[obj.potion]
 						}
 					}
+					
+					//wacky pets clean up
+					if (pets[index].type == 'wacky') {
+						if (pets[index].pet) pets[index].canHatch = '-N/R-'
+						pets[index].feedValue = 0					
+					}
+
+
 
 					//triad Bingo
 					if (pets[index].type == 'drop') {				
@@ -2963,7 +2993,7 @@ ul#tableOfContents > li {
 ****   Specific Sections   *******************************************
 *********************************************************************/
 #MAIN > * {
-    display: none; // all sections hidden by default
+    display: none; /* all sections hidden by default */
 }
 
 #overviewSection h1 {
@@ -2979,7 +3009,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v1.8)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v2.0)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -3010,6 +3040,25 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>2.0 - Just Wacky<span class="date">2019-05-03</span></dt>
+        <dd><ul>
+	            <li>Features:
+                <ul>
+					<li>Added Wacky type</li>
+					<li>Stopped Wacky Pets being feed.</li>
+				</ul> 
+            </li>
+	        <li>Documentation:
+                <ul>
+					<li>Add all x-client calls except content (no header required)</li>
+                </ul>
+            </li>		
+	        <li>Bug Fixes:
+                <ul>
+					<li>Added delay to feeding, hatching and selling to avoid sever overload.</li>
+               </ul>
+            </li>
+		</ul></dd>		
 		<dt>1.8 - Bits for Bob the Pet<span class="date">2017-02-24</span></dt>
         <dd><ul>
 	        <li>Documentation:
