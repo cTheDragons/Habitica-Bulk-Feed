@@ -362,7 +362,7 @@ var imageStablePotion           =  'Pet_HatchingPotion_'
 var imageStablePet		        =  'Pet-'
 var imageFileSuffix				= '.png'
 
-var baseTimeoutPeriod			= 5000 // 5 seconds
+var baseTimeoutPeriod			= 2300 // 2.3 seconds = 58 minutes completing Triad Bingo
 var baseTimeoutPeriodLong		= 30000 // 30 seconds
 var clientId					= 'bc10ec41-4213-4482-bbb8-558e3c3ea8d5-BulkFeed'
 var userId						= '';
@@ -802,8 +802,19 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 		if (debug) console.log('debug postHatchPetFailure start');
 		if (debugShowObject) console.log(data);
 		var errData = data;
-		createActionLog(actionLogId, true, errData.responseJSON.message);
-		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errData.responseJSON.error + '\n' + errData.responseJSON.message  + '\n\nPlease refetch your data and try again.');	
+		var errItem = ''
+		var errMessage = ''
+		
+		if (errData.responseJSON != undefined) {
+			errItem = errData.responseJSON.error
+			if (errData.responseJSON.message != undefined ) errMessage = errData.responseJSON.message
+		} else {
+			if (errData.message != undefined ) errMessage = errData.responseText
+			if (errData.error != undefined ) errItem = errData.statusText
+		}
+		
+		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
+		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
 		index++
 		
 		postHatchPetCompleted()
@@ -995,8 +1006,19 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		if (debug) console.log('debug postFeedPetFailure start');
 		if (debugShowObject) console.log(data);
 		var errData = data;
-		createActionLog(actionLogId, true, errData.responseJSON.message);
-		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errData.responseJSON.error + '\n' + errData.responseJSON.message  + '\n\nPlease refetch your data and try again.');	
+		var errItem = ''
+		var errMessage = ''
+		
+		if (errData.responseJSON != undefined) {
+			errItem = errData.responseJSON.error
+			if (errData.responseJSON.message != undefined ) errMessage = errData.responseJSON.message
+		} else {
+			if (errData.message != undefined ) errMessage = errData.responseText
+			if (errData.error != undefined ) errItem = errData.statusText
+		}
+		
+		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
+		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
 		index++
 		
 		postFeedPetCompleted()
@@ -1158,8 +1180,19 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 		if (debug) console.log('debug postSellItemFailure start');
 		if (debugShowObject) console.log(data);
 		var errData = data;
-		createActionLog(actionLogId, true, errData.responseJSON.message);
-		alert('ERROR WITH  ' +  obj[itemNameIndex] + ' ' + obj[itemCatIndex] + '\n\n' + errData.responseJSON.error + '\n' + errData.responseJSON.message  + '\n\nPlease refetch your data and try again.');	
+		var errItem = ''
+		var errMessage = ''
+		
+		if (errData.responseJSON != undefined) {
+			errItem = errData.responseJSON.error
+			if (errData.responseJSON.message != undefined ) errMessage = errData.responseJSON.message
+		} else {
+			if (errData.message != undefined ) errMessage = errData.responseText
+			if (errData.error != undefined ) errItem = errData.statusText
+		}
+		
+		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage);
+		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
 		index++
 		
 		postSellItemCompleted()
@@ -1244,9 +1277,20 @@ function postReleaseTriadBingo() {
 		if (debug) console.log('debug postReleaseTriadBingoFailure start');
 		if (debugShowObject) console.log(data);
 		var errData = data;
-		createActionLog(actionLogId, true, errData.responseJSON.message);
-		alert('ERROR WITH Release Triad Bingo \n\n' + errData.responseJSON.error + '\n' + errData.responseJSON.message  + '\n\nPlease refetch your data and try again.');	
+		var errItem = ''
+		var errMessage = ''
 		
+		if (errData.responseJSON != undefined) {
+			errItem = errData.responseJSON.error
+			if (errData.responseJSON.message != undefined ) errMessage = errData.responseJSON.message
+		} else {
+			if (errData.message != undefined ) errMessage = errData.responseText
+			if (errData.error != undefined ) errItem = errData.statusText
+		}
+		
+		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
+		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
+
 		$('#posting .good').hide();		
 		fetchData()
 	}
@@ -1348,7 +1392,7 @@ function triadBingoHatchFeedPet() {
 	multiStepArray = []
 	multiStep = 0
 	
-	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?\n\nYou may want to get a drink, or do some tasks as this will take a while. (Estimated over 20 minutes).'
+	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?\n\nYou may want to get a drink, or do some tasks as this will take a while. (Estimated over 60 minutes).'
 	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Standard (Gen 1) pets as much as possible?\n\nYou may want to get a drink, or do some tasks as this will take a while. (Can be over 20 minutes).' 
 	
 	if (confirm(confirmMsg)) {
@@ -3056,6 +3100,7 @@ ul#tableOfContents > li {
 	        <li>Bug Fixes:
                 <ul>
 					<li>Added delay to feeding, hatching and selling to avoid sever overload.</li>
+					<li>Better error handling when JSON Message not available.</li>
                </ul>
             </li>
 		</ul></dd>		
