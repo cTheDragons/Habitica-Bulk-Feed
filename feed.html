@@ -182,7 +182,31 @@ sectionTables['pets'] = {
 				},
 			className: 'feedPetButton'		
 		})
-			
+		
+		returnButton.push({
+			text: 'Equip Pet', 
+			action: function (equipPet) {
+				var rowData = sectionTables['pets'].table.rows( { selected: true } ).data().toArray();
+				var petKeyIndex = sectionTables['pets'].petKeyIndex;
+				var petNameIndex = sectionTables['pets'].petNameIndex;
+				postEquip(rowData, 'pet')
+			},
+			className: 'equipButton'
+		})
+		
+		returnButton.push({
+			text: 'Equip Mount', 
+			action: function (equipMount) {
+				var rowData = sectionTables['pets'].table.rows( { selected: true } ).data().toArray();
+				var petKeyIndex = sectionTables['pets'].petKeyIndex;
+				var petNameIndex = sectionTables['pets'].petNameIndex;
+				postEquip(rowData, 'mount')
+			},
+			className: 'equipButton'
+		})	
+
+
+
 		return returnButton
 	}
 }
@@ -675,6 +699,99 @@ function fetchData() {
 //////////////////////////////////////////////////////////////////////
 // All post functions are implemented serial as they are unreliable when performed in parallel.
 
+
+
+//////////////////////////////////////////////////////////////////////
+//// Post Equip (pet or mount)        ////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+function postEquip(rowData, petOrMount) {
+	
+	// ["", "Cactus-Aquatic", "Aquatic Cactus", "Magic Postion", "Aquatic", "Cactus", "false", false, false, 0, 45258]
+    // [pic, contentName       name					type		 potionName  eggname  canhatch haspet hasmount feedbar idealfoodavail.]
+	
+	if (debug) console.log('debug postEquip start');
+	var contentName = 1; 
+	var textName = 2; 
+	var hasPet = 7; 
+	var hasMount = 8; 
+	
+	
+	if (rowData.length == 0) {
+			alert('No row selected.\nPlease select one row and try again.');
+	}
+	if (rowData.length > 1) {
+			alert('More than one row selected.\nPlease select only one row and try again.');
+	} 
+	if (rowData.length == 1) { 
+			// pet-section
+			if (petOrMount == 'pet') {
+				if (!rowData[0][hasPet]) { // user does not have this pet
+						alert('This pet cannot be equipped.\nPlease hatch it first, then try again.');			
+				} else { 
+						if (user.items.currentPet == rowData[0][contentName]) { // pet is already equipped
+							if (confirm('The following ' + petOrMount + ' is already equipped.\n\u2022' + rowData[0][textName] + '\nDo you want it to be unequipped?')) { 
+								postAjax(petOrMount, rowData[0][contentName], 'unequipped', rowData[0][textName]); 		
+							} else {
+								alert('Action cancelled.');
+							} 
+						} else { 
+							if (confirm('Are you sure you want to equip this pet:\n\u2022' + rowData[0][textName] + '?')) {
+					  			postAjax(petOrMount, rowData[0][contentName], 'equipped', rowData[0][textName]);
+							} else {
+								alert('Action cancelled.');
+							} 		
+						}		
+				} 
+			} // end pet-section
+		
+			// mount-section
+			if (petOrMount == 'mount') {
+				if (!rowData[0][hasMount]) { // user does not have this Mount
+						alert('This mount cannot be equipped.\nPlease hatch it first, then try again.');			
+				} else { 
+						if (user.items.currentMount == rowData[0][contentName]) { // mount is already equipped
+							if (confirm('The following ' + petOrMount + ' is already equipped.\n\u2022' + rowData[0][textName] + '\nDo you want it to be unequipped?')) { 
+								postAjax(petOrMount, rowData[0][contentName], 'unequipped', rowData[0][textName]); 			
+							} else {
+								alert('Action cancelled.');
+							} 
+						} else { // mount is not already equipped.. 
+							if (confirm('Are you sure you want to equip this mount:\n\u2022' + rowData[0][textName] + '?')) {
+							  	postAjax(petOrMount, rowData[0][contentName], 'equipped', rowData[0][textName]); 		
+							} else {
+								alert('Action cancelled.');
+							}
+						}		
+				} 
+			} // end mount-section			
+	} // end if exactely 1 row is selected
+	
+	function postAjax(type, key, equipOrUnequip, name) {
+		var urlToPost = 'https://habitica.com/api/v3/user/equip/' + type + '/' + key 
+		$.ajax({
+					url: urlToPost,
+					type: 'POST',
+					dataType: 'json',
+					cache: false,
+					beforeSend: function(xhr){
+							xhr.setRequestHeader('x-client', clientId);
+							xhr.setRequestHeader('x-api-user', userId);
+							xhr.setRequestHeader('x-api-key',  apiToken);
+						},
+					success: postEquipSuccess,
+					error: postEquipFailure
+				});
+	
+		function postEquipSuccess() {
+			alert('The following ' + petOrMount + ' was successfully ' + equipOrUnequip + ':\n\u2022' + name + '\n\nYour data will now be refreshed');
+			fetchData();				
+		}
+		
+		function postEquipFailure() {
+			alert('Failure: The following ' + petOrMount + 'could not be ' + equpOrUnequip + ':\n\u2022' + name); 
+		}
+	} // end function postAjax
+} // end postEquip
 
 
 //////////////////////////////////////////////////////////////////////
@@ -2821,6 +2938,10 @@ a.dt-button.feedPetButton {
 }
 
 a.dt-button.sellButton {
+	color: orange;
+}
+
+a.dt-button.equipButton {
 	color: orange;
 }
 
