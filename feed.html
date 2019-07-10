@@ -980,7 +980,6 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 	var actionLogId = 'FeedPet'
 	var proceed = noPromptToFeed
 	
-	console.log(rowData + "\nPetKeyIndex: "+ petKeyIndex + "\npetNameIndex: " + petNameIndex + "\nnoPromptToFeed: " + noPromptToFeed + "\nfoodKeyIndex: " + foodKeyIndex + "\nmultiStep: " + multiStep);
 	if (rowData.length == 0){
 		if (debug) console.log('debug no users to remove');
 		alert('No row selected.\nPlease select a row before trying again.');
@@ -1044,7 +1043,6 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		$('#posting .good').show();
 		
 		obj = loopList[index]
-		// Piti
 		//Find Food to use
 		foodKey = ''
 		if ((pets[obj[petKeyIndex]].feedValue > 0) ) { 
