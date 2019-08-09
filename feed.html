@@ -1027,7 +1027,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 			feedPetList += '\n\u2022  ' + loopList[i][petNameIndex]
 		}
 		
-		if (noPromptToFeed == false) proceed = (confirm('Are you sure you wish to feed the following pets?' + feedPetList + '\n\n')) 
+		if (noPromptToFeed == false) proceed = (confirm('Are you sure you wish to feed the following pets?' + feedPetList + '\n\nPlease note all types of food the Pet likes will be used.\n\n')) 
 		if (proceed){
 				feedPetList = ''
 				postNextFeedPet()
@@ -3181,7 +3181,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v2.0)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v2.1)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -3212,6 +3212,16 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>2.1 - Lets Ride!<span class="date">2019-08-09</span></dt>
+        <dd><ul>
+	            <li>Features:
+                <ul>
+					<li>Added Equip buttons to equip mount and pet (Thank you @PitiTheGrey)</li>
+					<li>Added a prompt if bulk feeding to warn users all types of food will be used</li>
+					<li>Added a prompt if manual feeding with the wrong food (Thank you @PitiTheGrey)</li>
+				</ul> 
+            </li>
+		</ul></dd>
 		<dt>2.0 - Just Wacky<span class="date">2019-05-03</span></dt>
         <dd><ul>
 	            <li>Features:
