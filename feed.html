@@ -182,7 +182,27 @@ sectionTables['pets'] = {
 				},
 			className: 'feedPetButton'		
 		})
-			
+		
+		returnButton.push({
+			text: 'Equip Pet', 
+			action: function (equipPet) {
+				var rowData = sectionTables['pets'].table.rows( { selected: true } ).data().toArray();
+				postEquip(rowData, 'pet')
+			},
+			className: 'equipButton'
+		})
+		
+		returnButton.push({
+			text: 'Equip Mount', 
+			action: function (equipMount) {
+				var rowData = sectionTables['pets'].table.rows( { selected: true } ).data().toArray();
+				postEquip(rowData, 'mount')
+			},
+			className: 'equipButton'
+		})	
+
+
+
 		return returnButton
 	}
 }
@@ -678,6 +698,99 @@ function fetchData() {
 
 
 //////////////////////////////////////////////////////////////////////
+//// Post Equip (pet or mount)        ////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+function postEquip(rowData, petOrMount) {
+	
+	// ["", "Cactus-Aquatic", "Aquatic Cactus", "Magic Postion", "Aquatic", "Cactus", "false", false, false, 0, 45258]
+    // [pic, contentName       name					type		 potionName  eggname  canhatch haspet hasmount feedbar idealfoodavail.]
+	
+	if (debug) console.log('debug postEquip start');
+	var contentName = 1; 
+	var textName = 2; 
+	var hasPet = 7; 
+	var hasMount = 8; 
+	
+	
+	if (rowData.length == 0) {
+			alert('No row selected.\nPlease select one row and try again.');
+	}
+	if (rowData.length > 1) {
+			alert('More than one row selected.\nPlease select only one row and try again.');
+	} 
+	if (rowData.length == 1) { 
+			// pet-section
+			if (petOrMount == 'pet') {
+				if (!rowData[0][hasPet]) { // user does not have this pet
+						alert('This pet cannot be equipped.\nPlease hatch it first, then try again.');			
+				} else { 
+						if (user.items.currentPet == rowData[0][contentName]) { // pet is already equipped
+							if (confirm('The following ' + petOrMount + ' is already equipped.\n\u2022' + rowData[0][textName] + '\nDo you want it to be unequipped?')) { 
+								postAjax(petOrMount, rowData[0][contentName], 'unequipped', rowData[0][textName]); 		
+							} else {
+								alert('Action cancelled.');
+							} 
+						} else { 
+							if (confirm('Are you sure you want to equip this pet:\n\u2022' + rowData[0][textName] + '?')) {
+					  			postAjax(petOrMount, rowData[0][contentName], 'equipped', rowData[0][textName]);
+							} else {
+								alert('Action cancelled.');
+							} 		
+						}		
+				} 
+			} // end pet-section
+		
+			// mount-section
+			if (petOrMount == 'mount') {
+				if (!rowData[0][hasMount]) { // user does not have this Mount
+						alert('This mount cannot be equipped.\nPlease hatch it first, then try again.');			
+				} else { 
+						if (user.items.currentMount == rowData[0][contentName]) { // mount is already equipped
+							if (confirm('The following ' + petOrMount + ' is already equipped.\n\u2022' + rowData[0][textName] + '\nDo you want it to be unequipped?')) { 
+								postAjax(petOrMount, rowData[0][contentName], 'unequipped', rowData[0][textName]); 			
+							} else {
+								alert('Action cancelled.');
+							} 
+						} else { // mount is not already equipped.. 
+							if (confirm('Are you sure you want to equip this mount:\n\u2022' + rowData[0][textName] + '?')) {
+							  	postAjax(petOrMount, rowData[0][contentName], 'equipped', rowData[0][textName]); 		
+							} else {
+								alert('Action cancelled.');
+							}
+						}		
+				} 
+			} // end mount-section			
+	} // end if exactely 1 row is selected
+	
+	function postAjax(type, key, equipOrUnequip, name) {
+		var urlToPost = 'https://habitica.com/api/v3/user/equip/' + type + '/' + key 
+		$.ajax({
+					url: urlToPost,
+					type: 'POST',
+					dataType: 'json',
+					cache: false,
+					beforeSend: function(xhr){
+							xhr.setRequestHeader('x-client', clientId);
+							xhr.setRequestHeader('x-api-user', userId);
+							xhr.setRequestHeader('x-api-key',  apiToken);
+						},
+					success: postEquipSuccess,
+					error: postEquipFailure
+				});
+	
+		function postEquipSuccess() {
+			alert('The following ' + petOrMount + ' was successfully ' + equipOrUnequip + ':\n\u2022' + name + '\n\nYour data will now be refreshed');
+			fetchData();				
+		}
+		
+		function postEquipFailure() {
+			alert('Failure: The following ' + petOrMount + 'could not be ' + equpOrUnequip + ':\n\u2022' + name); 
+		}
+	} // end function postAjax
+} // end postEquip
+
+
+//////////////////////////////////////////////////////////////////////
 ////  Post Hatch Pet				      //////////////////////////////
 //////////////////////////////////////////////////////////////////////
 function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiStep) {
@@ -691,7 +804,6 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 	var loopList = []
 	var actionLogId = 'HatchPet'
 	var proceed = noPromptToFeed
-	
 	if (rowData.length == 0){
 		if (debug) console.log('debug no users to remove');
 		alert('No row selected.\nPlease select a row before trying again.');
@@ -915,7 +1027,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 			feedPetList += '\n\u2022  ' + loopList[i][petNameIndex]
 		}
 		
-		if (noPromptToFeed == false) proceed = (confirm('Are you sure you wish to feed the following pets?' + feedPetList + '\n\n')) 
+		if (noPromptToFeed == false) proceed = (confirm('Are you sure you wish to feed the following pets?' + feedPetList + '\n\nPlease note all types of food the Pet likes will be used.\n\n')) 
 		if (proceed){
 				feedPetList = ''
 				postNextFeedPet()
@@ -931,7 +1043,6 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 		$('#posting .good').show();
 		
 		obj = loopList[index]
-		
 		//Find Food to use
 		foodKey = ''
 		if ((pets[obj[petKeyIndex]].feedValue > 0) ) { 
@@ -1317,10 +1428,11 @@ function manualFeedPet(rowData, petKeyIndex, petNameIndex, foodKey) {
 	if (debug) console.log('debug mannualFeedPet start');
 	var feedPetList = ''
 	var notFeedPetList = ''
+	var feedPetListIncorrectFood = ''
 	var index = 0
 	var loopList = []
+	var confirmationText = ''
 
-	
 	if (rowData.length == 0){
 		if (debug) console.log('debug no users to remove');
 		alert('No row selected.\nPlease select a row before trying again.');
@@ -1367,17 +1479,29 @@ function manualFeedPet(rowData, petKeyIndex, petNameIndex, foodKey) {
 		{
 			loopList[i].push(foodKey)
 			feedPetList += '\n\u2022  ' + loopList[i][petNameIndex]
+			if (pets[rowData[i][petKeyIndex]].potion != food[foodKey].target) {
+				feedPetListIncorrectFood += '\n\u2022  ' + loopList[i][petNameIndex]
+			}
+		}		
 		}
-		
-		if (confirm('Are you sure you wish to feed the following pets with ' + food[foodKey].text + ' ?' + feedPetList + '\n\n')){
+		if (loopList.length > 0) {
+			confirmationText += 'Feed ' + food[foodKey].text + ' to:'
+			confirmationText += feedPetList + '?\n'	 
+		}
+		if (feedPetListIncorrectFood.length > 0) {
+			confirmationText += food[foodKey].text + ' is not the prefered food for' 
+			confirmationText += feedPetListIncorrectFood + '!\n'
+		} 
+		confirmationText += 'Are you sure you want to feed ' + food[foodKey].text + '?'
+			
+		if (confirm(confirmationText)) {
 			postFeedPet(loopList, petKeyIndex, petNameIndex, true, (loopList[0].length-1), -1)
 		} else {
 			alert('Action cancelled')
 			return;
-		}
-
-	}
+		}		
 }
+
 
 
 
@@ -2824,6 +2948,10 @@ a.dt-button.sellButton {
 	color: orange;
 }
 
+a.dt-button.equipButton {
+	color: orange;
+}
+
 
 div.dt-button-collection {
 	width: 180px;
@@ -3053,7 +3181,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v2.0)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v2.1)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -3084,6 +3212,16 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>2.1 - Lets Ride!<span class="date">2019-08-09</span></dt>
+        <dd><ul>
+	            <li>Features:
+                <ul>
+					<li>Added Equip buttons to equip mount and pet (Thank you @PitiTheGrey)</li>
+					<li>Added a prompt if bulk feeding to warn users all types of food will be used</li>
+					<li>Added a prompt if manual feeding with the wrong food (Thank you @PitiTheGrey)</li>
+				</ul> 
+            </li>
+		</ul></dd>
 		<dt>2.0 - Just Wacky<span class="date">2019-05-03</span></dt>
         <dd><ul>
 	            <li>Features:
