@@ -1027,7 +1027,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 			feedPetList += '\n\u2022  ' + loopList[i][petNameIndex]
 		}
 		
-		if (noPromptToFeed == false) proceed = (confirm('Are you sure you wish to feed the following pets?' + feedPetList + '\n\nPlease note all types of food the Pet likes will be used.\n\n')) 
+		if (noPromptToFeed == false) proceed = (confirm('Are you sure you wish to feed the following pets?' + feedPetList + '\n\nPlease note that ALL food, including special, seasonal foods such as candies or pies, will be used to feed your pets if they like the food.\n\n')) 
 		if (proceed){
 				feedPetList = ''
 				postNextFeedPet()
@@ -1516,8 +1516,8 @@ function triadBingoHatchFeedPet() {
 	multiStepArray = []
 	multiStep = 0
 	
-	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?\n\nPlease note that all types of food will be used with feeding your pets.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Estimated over 60 minutes).'
-	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Standard (Gen 1) pets as much as possible?\n\nPlease note that all types of food will be used with feeding your pets.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Can be over 20 minutes).' 
+	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?\n\nPlease note that ALL food, including special, seasonal foods such as candies or pies, will be used to feed your pets if they like the food.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Estimated over 60 minutes).'
+	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Standard (Gen 1) pets as much as possible?\n\nPlease note that ALL food, including special, seasonal foods such as candies or pies, will be used to feed your pets if they like the food.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Can be over 20 minutes).' 
 	
 	if (confirm(confirmMsg)) {
 
