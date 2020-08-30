@@ -41,6 +41,7 @@ Contributors:
 	 <!--- https://datatables.net/download/ -->
 	<script type="text/javascript" src="https://cdn.datatables.net/v/dt/jszip-2.5.0/pdfmake-0.1.18/dt-1.10.12/b-1.2.2/b-colvis-1.2.2/b-flash-1.2.2/b-html5-1.2.2/b-print-1.2.2/se-1.2.0/datatables.min.js"></script>
 	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/jszip-2.5.0/pdfmake-0.1.18/dt-1.10.12/b-1.2.2/b-colvis-1.2.2/b-flash-1.2.2/b-html5-1.2.2/b-print-1.2.2/se-1.2.0/datatables.min.css"/>
+	<script src="js/api-limit.js""></script> <!-- Personal Script used to handle Ajax calls with limiting-->
  	
 <script type="text/javascript">
 $(function() { // wraps around all our code to not pollute global namespace
@@ -67,6 +68,7 @@ var multiStepArray = []; //For completing multiple different actions
 ////   Global Constants                              /////////////////
 //////////////////////////////////////////////////////////////////////
 var DOUBLEQUOTES = 		'"' //This is to make my life easier... 
+var SINGLEQUOTE = 		"'" //This is to make my life easier... 
 var SECTIONREFRESH = 	"SectionRefresh"
 
 
@@ -390,8 +392,9 @@ var apiToken					= '';
 var showImage					= false;
 var exportOption 			 	= 'papaBear';
 var exportFormat			 	= 1;
-var debug						= false;
-var debugShowObject				= false;
+var rlCurrent					= {};  //holds the Current API Remaining details - must be a better way to do this.
+var debug						= true;
+var debugShowObject				= true;
 
 if (debug || debugShowObject) serverName = '*** TURN DEBUG OFF! *** - ' + serverName
 if (debug) console.log('debug 1');
@@ -402,6 +405,13 @@ var sectionOpen = ''; // holds the ID attribute of a section of the page;
 var tellMe = '<a href="https://github.com/cTheDragons">tell me</a>';
 
 var neverDate = '1900-01-01'
+
+
+//////////////////////////////////////////////////////////////////////
+////   Show API Version                   ///////////////////////////
+//////////////////////////////////////////////////////////////////////
+var apiVersion = getApiVersion()
+$('#apiVersion').text(apiVersion);
 
 //////////////////////////////////////////////////////////////////////
 ////   allow Show/Hide Toggling to work    ///////////////////////////
@@ -622,44 +632,26 @@ function fetchData() {
     var ajaxRunningCount = 2; // drops to 0 when all calls have succeeded
 	
     // fetch the user's own content (guilds, parties):
-	$('#loading #statusFetch').text('Asking for User Data');
-    $.ajax({
-        url: serverUrl + serverPathUser,
-        type: 'GET',
-        dataType: 'json',
-        cache: false,
-        beforeSend: function(xhr){
-                xhr.setRequestHeader('x-client', clientId);
-				xhr.setRequestHeader('x-api-user', userId);
-                xhr.setRequestHeader('x-api-key',  apiToken);
-            },
-        success: fetchUserSuccess,
-        error: fetchFailure
-    });
-
-    // fetch the site-wide content (gear names and stats, etc):
-	$('#loading #statusFetch').text('Asking for Generic Content');
-    $.ajax({
-        url: serverUrl + serverPathContent,
-        type: 'GET',
-        dataType: 'json',
-        cache: true,
-        success: fetchContentSuccess,
-        error: fetchFailure
-    });
+	var call = []
 	
-
-	function fetchFailure() {
+	call.push({requestType: 'GET', urlTo: serverUrl + serverPathUser, newData: '', fnSuccess: fetchUserSuccess, fnFailure: fetchFailure, statusText: 'Asking for User Data'})
+	call.push({requestType: 'GET', urlTo: serverUrl + serverPathContent, newData: '', fnSuccess: fetchContentSuccess, fnFailure: fetchFailure, statusText: 'Asking for Generic Content'})
+	makeAjaxCall(call, userId, apiToken, rlCurrent)	
+	
+	function fetchFailure(data, rl) {
         if (debug) console.log('debug fetchFailure start');
+		rlCurrent = rl
         $('#loading .good').hide();
         $('#loading .bad' ).show();
         $('#documentationAndForm').show(); // in case user has done a re-fetch
         $('#documentationAndFormClose').hide();
+		$('#loading #statusError').text('Error : ' + data.responseJSON.error + '  -  ' + data.responseJSON.message ); 
+		console.log(data)
         if (debug) console.log('debug fetchFailure end');
     }
-	function fetchUserSuccess(data) {
+	function fetchUserSuccess(data, rl) {
         if (debug) console.log('debug parseData User success start');
-		$('#loading #statusFetch').text('Fetching User Data');
+		rlCurrent = rl
         user = data.data;
 		
 		userIsAdmin = false;
@@ -674,9 +666,9 @@ function fetchData() {
         }
     }
 	
-	function fetchContentSuccess(data) {
+	function fetchContentSuccess(data, rl) {
         if (debug) console.log('debug parseData Content success start');
-		$('#loading #statusFetch').text('Fetching Generic Content');
+		rlCurrent = rl
         content = data.data;
 		if (debugShowObject) console.log(content);
         ajaxRunningCount--;
@@ -726,13 +718,13 @@ function postEquip(rowData, petOrMount) {
 				} else { 
 						if (user.items.currentPet == rowData[0][contentName]) { // pet is already equipped
 							if (confirm('The following ' + petOrMount + ' is already equipped.\n\u2022' + rowData[0][textName] + '\nDo you want it to be unequipped?')) { 
-								postAjax(petOrMount, rowData[0][contentName], 'unequipped', rowData[0][textName]); 		
+								postNexttEquip(petOrMount, rowData[0][contentName], 'unequipped', rowData[0][textName]); 		
 							} else {
 								alert('Action cancelled.');
 							} 
 						} else { 
 							if (confirm('Are you sure you want to equip this pet:\n\u2022' + rowData[0][textName] + '?')) {
-					  			postAjax(petOrMount, rowData[0][contentName], 'equipped', rowData[0][textName]);
+					  			postNexttEquip(petOrMount, rowData[0][contentName], 'equipped', rowData[0][textName]);
 							} else {
 								alert('Action cancelled.');
 							} 		
@@ -747,13 +739,13 @@ function postEquip(rowData, petOrMount) {
 				} else { 
 						if (user.items.currentMount == rowData[0][contentName]) { // mount is already equipped
 							if (confirm('The following ' + petOrMount + ' is already equipped.\n\u2022' + rowData[0][textName] + '\nDo you want it to be unequipped?')) { 
-								postAjax(petOrMount, rowData[0][contentName], 'unequipped', rowData[0][textName]); 			
+								postNexttEquip(petOrMount, rowData[0][contentName], 'unequipped', rowData[0][textName]); 			
 							} else {
 								alert('Action cancelled.');
 							} 
 						} else { // mount is not already equipped.. 
 							if (confirm('Are you sure you want to equip this mount:\n\u2022' + rowData[0][textName] + '?')) {
-							  	postAjax(petOrMount, rowData[0][contentName], 'equipped', rowData[0][textName]); 		
+							  	postNexttEquip(petOrMount, rowData[0][contentName], 'equipped', rowData[0][textName]); 		
 							} else {
 								alert('Action cancelled.');
 							}
@@ -762,31 +754,30 @@ function postEquip(rowData, petOrMount) {
 			} // end mount-section			
 	} // end if exactely 1 row is selected
 	
-	function postAjax(type, key, equipOrUnequip, name) {
+	function postNexttEquip(type, key, equipOrUnequip, name) {
 		var urlToPost = 'https://habitica.com/api/v3/user/equip/' + type + '/' + key 
-		$.ajax({
-					url: urlToPost,
-					type: 'POST',
-					dataType: 'json',
-					cache: false,
-					beforeSend: function(xhr){
-							xhr.setRequestHeader('x-client', clientId);
-							xhr.setRequestHeader('x-api-user', userId);
-							xhr.setRequestHeader('x-api-key',  apiToken);
-						},
-					success: postEquipSuccess,
-					error: postEquipFailure
-				});
+		
+		var call = []
+		call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postEquipSuccess, fnFailure: postEquipFailure, statusText: equipOrUnequip + ' ' + name})
+		makeAjaxCall(call, userId, apiToken, rlCurrent)
 	
-		function postEquipSuccess() {
+		function postEquipSuccess(data, rl) {
+			if (debug) console.log('debug postEquipSuccess start');
+			rlCurrent = rl
+			if (debugShowObject) console.log(data);
 			alert('The following ' + petOrMount + ' was successfully ' + equipOrUnequip + ':\n\u2022' + name + '\n\nYour data will now be refreshed');
 			fetchData();				
 		}
 		
-		function postEquipFailure() {
-			alert('Failure: The following ' + petOrMount + 'could not be ' + equpOrUnequip + ':\n\u2022' + name); 
+		function postEquipFailure(data, rl) {
+			if (debug) console.log('debug postEquipFailure start');
+			rlCurrent = rl
+			if (debugShowObject) console.log(data);
+			var errData = data;
+			alert('Failure: The following ' + petOrMount + 'could not be ' + equpOrUnequip + ':\n\u2022' + name + '\n\n' + errData.responseJSON.error + '\n' + errData.responseJSON.message  );				
+			
 		}
-	} // end function postAjax
+	} // end function postNexttEquip
 } // end postEquip
 
 
@@ -800,7 +791,7 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 	var nothatchPetList = ''
 	var eggKey = ''
 	var potionKey = ''
-	var index = 0 
+	var loopCount = 0
 	var loopList = []
 	var actionLogId = 'HatchPet'
 	var proceed = noPromptToFeed
@@ -866,52 +857,47 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 	function postNextHatchPet(){
 		$('#posting .good').show();
 		
-		obj = loopList[index]
+		var call = []
+		
+		for(var i = 0; i < loopList.length; i++) {			
+			obj = loopList[i]
+					
+			//Get Keys
+			eggKey = pets[obj[petKeyIndex]].egg 
+			potionKey = pets[obj[petKeyIndex]].potion 
 			
-		
-		//Get Keys
-		eggKey = pets[obj[petKeyIndex]].egg 
-		potionKey = pets[obj[petKeyIndex]].potion 
-		
-		if (pets[obj[petKeyIndex]].pet == false){ //test for triad Bingo
-			if ((eggs[eggKey].total > 0) && (potions[potionKey].total > 0)) {
-				eggs[eggKey].total-- //remove one item away
-				potions[potionKey].total-- //remove one item away
-				
-				urlToPost = serverUrl + serverPathHatchPet + '/' + eggKey + '/' + potionKey
-				$('#posting #statusPost').text('Hatching ' + obj[petNameIndex] );
-				createActionLog(actionLogId, false, 'Hatching ' + obj[petNameIndex] );
-				if (debugShowObject) console.log(urlToPost);
-				$.ajax({
-					url: urlToPost,
-					type: 'POST',
-					dataType: 'json',
-					cache: false,
-					beforeSend: function(xhr){
-							xhr.setRequestHeader('x-client', clientId);
-							xhr.setRequestHeader('x-api-user', userId);
-							xhr.setRequestHeader('x-api-key',  apiToken);
-						},
-					success: postHatchPetSuccess,
-					error: postHatchPetFailure
-				});		
+			if (pets[obj[petKeyIndex]].pet == false){ //test for triad Bingo (Does not check if the pet is there)
+				if ((eggs[eggKey].total > 0) && (potions[potionKey].total > 0)) {
+					eggs[eggKey].total-- //remove one item away
+					potions[potionKey].total-- //remove one item away
+					
+					urlToPost = serverUrl + serverPathHatchPet + '/' + eggKey + '/' + potionKey
+					call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postHatchPetSuccess, fnFailure: postHatchPetFailure, statusText: 'Hatching ' + obj[petNameIndex] , item: obj})
+					
+				} else {
+					//No Eggs To hatch
+					createActionLog(actionLogId, false, 'Not enough eggs or potions to hatch ' + obj[petNameIndex] );
+					loopCount++
+				}
 			} else {
-				//No Eggs To hatch
-				createActionLog(actionLogId, false, 'Not enough eggs or potions to hatch ' + obj[petNameIndex] );
-				index++
-				postHatchPetCompleted()
+				//no action - silently fall over
+				loopCount++		
 			}
+		} //end for loop
+		
+		if (call.length > 0) {
+			makeAjaxCall(call, userId, apiToken, rlCurrent)		
 		} else {
-			//no action - silently fall over
-			index++
-			postHatchPetCompleted()			
+			postHatchPetCompleted()	
 		}
+
 	}
 		
 
 	
-	function postHatchPetFailure(data){
+	function postHatchPetFailure(data, rl, obj){
 		if (debug) console.log('debug postHatchPetFailure start');
+		rlCurrent = rl
 		if (debugShowObject) console.log(data);
 		var errData = data;
 		var errItem = ''
@@ -925,44 +911,39 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 			if (errData.error != undefined ) errItem = errData.statusText
 		}
 		
-		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
-		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
-		index++
+		createActionLog(actionLogId, true, 'Hatching ' + obj[petNameIndex] + ': ' + errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
+		alert('ERROR WITH Hatching ' + obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
+		loopCount++
 		
 		postHatchPetCompleted()
 	}
 
 
-	function postHatchPetSuccess(data){
-		if (debug) console.log('debug postHatchPetSucess start');
-		$('#posting #statusPost').text('Successfully Hatched ' + obj[petNameIndex] + '(' + data.message + ')' );
-		createActionLog(actionLogId, true, data.message);
+	function postHatchPetSuccess(data, rl, obj){
+		if (debug) console.log('debug postHatchPetSuccess start');
+		rlCurrent = rl
+		createActionLog(actionLogId, true, 'Hatching ' + obj[petNameIndex] + ': ' + data.message);
 		if (debugShowObject) console.log(data);
 		pets[obj[petKeyIndex]].feedValue = 1 //This is set for multistep to state the pet can be feed.
 
-		index++
+		loopCount++
 		hatchPetList += '\n\u2022  ' + obj[petNameIndex]  	
 		postHatchPetCompleted()
 		
 	}
 	
 	function postHatchPetCompleted() {
-		if (index === loopList.length){
+		if (loopCount === loopList.length){
 			$('#posting .good').hide();
 			if (debugShowObject) console.log(hatchPetList);
 			if (multiStep >= 0) {
 				multiStepArray[multiStep].result = 'The following pets have become mounts:' + hatchPetList
 				multiStepNextAction()
 			} else {	
-				alert('The following pets have been hatched:' + hatchPetList + '\n\nYour data will now be refreshed')
+				alert('The following pets have been hatched:' + hatchPetList + '\n\nCheck the Action Log for more detail.\n\nYour data will now be refreshed')
 				fetchData() 
 			}
-		} else {
-			setTimeout(function(){
-				postNextHatchPet()
-			}, baseTimeoutPeriod)
-		}		
-	
+		} 
 	}
 }
 
@@ -973,9 +954,9 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 	if (debug) console.log('debug postFeedPet start');
 	var urlToPost = ''	
 	var feedPetList = ''
-	var notFeedPetList = ''
-	var index = 0
+	var notFeedPetList = ''	
 	var foodKey 
+	var loopCount = 0
 	var loopList = []
 	var actionLogId = 'FeedPet'
 	var proceed = noPromptToFeed
@@ -1042,73 +1023,69 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 	function postNextFeedPet(){
 		$('#posting .good').show();
 		
-		obj = loopList[index]
-		//Find Food to use
-		foodKey = ''
-		if ((pets[obj[petKeyIndex]].feedValue > 0) ) { 
-			if (foodKeyIndex < 0) {
-				if (pets[obj[petKeyIndex]].type == 'premium') {
-					var maxFood = 0
-					$.each(potions, function(index2, obj2){
-						if (obj2.foodAvail > maxFood ) {
-							maxFood = obj2.foodAvail
-							$.each(food, function(index3, obj3){
-								if ((obj3.total > 0 ) && (obj3.target == index2)) {
-									foodKey = index3
-								}						
-							});
-						}						
-					});
+		var call = []
+		
+		for(var i = 0; i < loopList.length; i++) {			
+			obj = loopList[i]
+		
+			//Find Food to use
+			foodKey = ''
+			if ((pets[obj[petKeyIndex]].feedValue > 0) ) { 
+				if (foodKeyIndex < 0) {
+					if (pets[obj[petKeyIndex]].type == 'premium') {
+						var maxFood = 0
+						$.each(potions, function(index2, obj2){
+							if (obj2.foodAvail > maxFood ) {
+								maxFood = obj2.foodAvail
+								$.each(food, function(index3, obj3){
+									if ((obj3.total > 0 ) && (obj3.target == index2)) {
+										foodKey = index3
+									}						
+								});
+							}						
+						});
+					} else {
+						$.each(food, function(index2, obj2){
+							if (obj2.total > 0 ) {
+								if (pets[obj[petKeyIndex]].potion == obj2.target) foodKey = index2
+							}
+							
+						});
+					}
 				} else {
-					$.each(food, function(index2, obj2){
-						if (obj2.total > 0 ) {
-							if (pets[obj[petKeyIndex]].potion == obj2.target) foodKey = index2
+					if (food[obj[foodKeyIndex]] != undefined) {
+						if (food[obj[foodKeyIndex]].total > 0 ) {
+							foodKey = obj[foodKeyIndex]
 						}
-						
-					});
-				}
-			} else {
-				if (food[obj[foodKeyIndex]] != undefined) {
-					if (food[obj[foodKeyIndex]].total > 0 ) {
-						foodKey = obj[foodKeyIndex]
 					}
 				}
-			}
 
-		
-			if (foodKey != '') {
-				food[foodKey].total-- //remove one item away
-				potions[food[foodKey].target].foodAvail-- //for magic potion pets
-		
-				urlToPost = serverUrl + serverPathFeedPet + '/' + obj[petKeyIndex] + '/' + foodKey
-				$('#posting #statusPost').text('Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text );
-				createActionLog(actionLogId, false, 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text);
-				if (debugShowObject) console.log(urlToPost);
-				$.ajax({
-					url: urlToPost,
-					type: 'POST',
-					dataType: 'json',
-					cache: false,
-					beforeSend: function(xhr){
-							xhr.setRequestHeader('x-client', clientId);
-							xhr.setRequestHeader('x-api-user', userId);
-							xhr.setRequestHeader('x-api-key',  apiToken);
-						},
-					success: postFeedPetSuccess,
-					error: postFeedPetFailure
-				});		
+			
+				if (foodKey != '') {
+					food[foodKey].total-- //remove one item away
+					potions[food[foodKey].target].foodAvail-- //for magic potion pets
+			
+					urlToPost = serverUrl + serverPathFeedPet + '/' + obj[petKeyIndex] + '/' + foodKey
+					call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postFeedPetSuccess, fnFailure: postFeedPetFailure, statusText: 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text , item: obj})
+	
+				} else {
+					//No Food To Feed
+					createActionLog(actionLogId, false, 'Not enough food to feed ' + obj[petNameIndex] );
+					loopCount++
+				}
 			} else {
-				//No Food To Feed
-				createActionLog(actionLogId, false, 'Not enough food to feed ' + obj[petNameIndex] );
-				index++
-				postFeedPetCompleted()
+					//No Pet To Feed
+					createActionLog(actionLogId, false, 'Cannot feed pet ' + obj[petNameIndex] + ' as it is not hatched.' );
+					loopCount++
 			}
+		} //end for loop
+		
+		if (call.length > 0) {
+			makeAjaxCall(call, userId, apiToken, rlCurrent)		
 		} else {
-				//No Pet To Feed
-				createActionLog(actionLogId, false, 'Cannot feed pet ' + obj[petNameIndex] + ' as it is not hatched.' );
-				index++
-				postFeedPetCompleted()
+			postFeedPetCompleted()	
 		}
+		
 	}
 		
 
@@ -1128,9 +1105,9 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 			if (errData.error != undefined ) errItem = errData.statusText
 		}
 		
-		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
+		createActionLog(actionLogId, true, 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text +': ' + errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
 		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
-		index++
+		loopCount++
 		
 		postFeedPetCompleted()
 	}
@@ -1138,13 +1115,12 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 
 	function postFeedPetSuccess(data){
 		if (debug) console.log('debug postFeedPetSucess start');
-		$('#posting #statusPost').text('Successfully Feed ' + obj[petNameIndex] + '(' + data.message + ')' );
-		createActionLog(actionLogId, true, data.message);
+		createActionLog(actionLogId, true, 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text +': ' +  data.message);
 		if (debugShowObject) console.log(data);
 		
 		
 		if (data.data <= 0) {
-			index++
+			loopCount++
 			pets[obj[petKeyIndex]].pet = false //Set to false so pet can be feed again for triad.
 			feedPetList += '\n\u2022  ' + obj[petNameIndex]  
 		}	
@@ -1153,7 +1129,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 	}
 	
 	function postFeedPetCompleted() {
-		if (index === loopList.length){
+		if (loopCount === loopList.length){
 			$('#posting .good').hide();
 			if (debugShowObject) console.log(feedPetList);
 			if (multiStep >= 0) {
@@ -1163,11 +1139,7 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 				alert('The following pets have become mounts:' + feedPetList + '\n\nYour data will now be refreshed')
 				fetchData() 
 			}
-		} else {
-			setTimeout(function(){
-				postNextFeedPet()
-			}, baseTimeoutPeriod)
-		}		
+		} 	
 	
 	}
 }
@@ -1181,7 +1153,7 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 	if (debug) console.log('debug postSellItem start');
 	var urlToPost = ''	
 	var sellItemList = ''
-	var index = 0
+	var loopCount = 0
 	var foodKey 
 	var loopList = []
 	var sellAmount = Math.abs(sellAction)
@@ -1249,46 +1221,44 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 	function postNextSellItem(){
 		$('#posting .good').show();
 		
-		obj = loopList[index]
-				
-		if (sellAction == 0) {
-			sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total
-		} else if (sellAction > 0) {
-			sellAmountUrl = sellAmount
-		} else if (sellAction < 0) {
-			sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total - sellAmount
-		}
+		var call = []
+		
+		for(var i = 0; i < loopList.length; i++) {			
+			obj = loopList[i]
 
-		if (sellAmountUrl > 0) {
-			urlToPost = serverUrl + serverPathSellItem + '/' + itemCode[obj[itemCatIndex]] + '/' + obj[itemKeyIndex] + '?amount=' + sellAmountUrl
-			$('#posting #statusPost').text('Selling ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] );
-			createActionLog(actionLogId, false, 'Selling ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]);
-			if (debugShowObject) console.log(urlToPost);
-			$.ajax({
-				url: urlToPost,
-				type: 'POST',
-				dataType: 'json',
-				cache: false,
-				beforeSend: function(xhr){
-						xhr.setRequestHeader('x-client', clientId);
-						xhr.setRequestHeader('x-api-user', userId);
-						xhr.setRequestHeader('x-api-key',  apiToken);
-					},
-				success: postSellItemSuccess,
-				error: postSellItemFailure
-			});		
+				
+			if (sellAction == 0) {
+				sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total
+			} else if (sellAction > 0) {
+				sellAmountUrl = sellAmount
+			} else if (sellAction < 0) {
+				sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total - sellAmount
+			}
+
+			if (sellAmountUrl > 0) {
+				obj.sellAmountUrl = sellAmountUrl
+				urlToPost = serverUrl + serverPathSellItem + '/' + itemCode[obj[itemCatIndex]] + '/' + obj[itemKeyIndex] + '?amount=' + sellAmountUrl
+				call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postSellItemSuccess, fnFailure: postSellItemFailure, statusText: 'Selling ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] , item: obj})
+						
+			} else {
+				//Not enough to sell
+				createActionLog(actionLogId, false, 'Not enough to sell of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] );
+				loopCount++		
+			}
+		} //end for loop
+		
+		if (call.length > 0) {
+			makeAjaxCall(call, userId, apiToken, rlCurrent)		
 		} else {
-			//Not enough to sell
-			createActionLog(actionLogId, false, 'Not enough to sell of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] );
-			index++
-			postSellItemCompleted()			
+			postSellItemCompleted()	
 		}
 	}
 		
 
 	
-	function postSellItemFailure(data){
+	function postSellItemFailure(data, rl, obj){
 		if (debug) console.log('debug postSellItemFailure start');
+		rlCurrent = rl
 		if (debugShowObject) console.log(data);
 		var errData = data;
 		var errItem = ''
@@ -1302,21 +1272,21 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 			if (errData.error != undefined ) errItem = errData.statusText
 		}
 		
-		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage);
+		createActionLog(actionLogId, true, 'Selling ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] + ': ' + errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage);
 		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
-		index++
+		loopCount++
 		
 		postSellItemCompleted()
 	}
 
 
-	function postSellItemSuccess(data){
+	function postSellItemSuccess(data, rl, obj){
 		if (debug) console.log('debug postSellItemSucess start');
-		$('#posting #statusPost').text('Successfully sold ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] ) ; //+ '(' + data.message + ')' );
-		createActionLog(actionLogId, true, 'Successfully sold ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]);
+		rlCurrent = rl
+		createActionLog(actionLogId, true, 'Selling ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] + ': ' + 'Successfully sold ' + obj.sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]);
 		if (debugShowObject) console.log(data);
 		
-		index++
+		loopCount++
 		sellItemList += '\n\u2022  ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]  
 
 		postSellItemCompleted()
@@ -1324,7 +1294,7 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 	}
 	
 	function postSellItemCompleted() {
-		if (index === loopList.length){
+		if (loopCount === loopList.length){
 			$('#posting .good').hide();
 			if (debugShowObject) console.log(sellItemList);
 			if (multiStep >= 0) {
@@ -1334,11 +1304,7 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 				alert('The following items have been sold:' + sellItemList + '\n\nYour data will now be refreshed')
 				fetchData() 
 			}
-		} else {
-			setTimeout(function(){
-				postNextSellItem()
-			}, baseTimeoutPeriod)
-		}		
+		} 		
 	
 	}
 }
@@ -1626,9 +1592,7 @@ function parseData() {
 	//////////////////////////////////////////////////////////////////////
     ////   Display the HTML that the functions have created   ////////////
     //////////////////////////////////////////////////////////////////////
-    $('#loading #statusFetch').text('') //All Done
 	$('#loading .good').hide();
-	$('#posting .good').hide(); // just to be sure
     $('#documentationAndFormClose').show();
     $('#documentationAndForm').hide();
 	$('.div-triadBingo').removeAttr('disabled');
@@ -2846,20 +2810,6 @@ body {
 }
 
 
-#posting {
-    margin-right: 30px;
-    margin-left: 30px;
-    color: orange;
-    font-size: 1.5em;
-    font-weight: bold;
-}
-#posting ul {
-    font-size: 0.8em;
-}
-#posting ul a {
-    color: orange;
-}
-
 .narrowContent {      /* The data should be as wide as the user's window   */
     max-width: 500px; /* but some explanatory paragraphs should be narrow. */
 }
@@ -2996,6 +2946,9 @@ h1>a:first-child:hover { /* "Habitica" link in header */
 }
 h1 span {
     font-size: 0.5em;
+}
+h1 span span {
+    font-size: 1.0em;
 }
 h2 {
     margin-top: 30px;
@@ -3181,7 +3134,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v2.1.1)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v3.0- vApi<span class="apiVersion" id="apiVersion"> NOT INSTALLED !</span>)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -3189,8 +3142,9 @@ ul#tableOfContents > li {
 
 <div id="loading">
     <div class="good hide">
-        <p>Please wait. Fetching data from
-        <span id="serverName">Habitica</span>... <span id="statusFetch"></span></p>
+        <p>Please wait. <span id="statusCallType">Fetching</span> data from
+        <span id="serverName">Habitica</span>... <span id="statusMessage"></span></p>
+		<p><span id="statusWait"></span></p>
     </div>
     <div class="bad hide">
         <p>There was an error obtaining your data.</p>
@@ -3200,19 +3154,24 @@ ul#tableOfContents > li {
             <li>If the page's URL starts with "http://" change it to start with "https://" (or just use <a href="https://oldgods.net/habitica/cTheDragons/feed.html">this correct link</a>).</li>
             <li>If neither of those help, contact me! See <strong>"Help and Contact Details"</strong> at the bottom of this page.</li>
         </ul>
+		<span id="statusError"></span></p>
     </div>
-</div>
-<div id="posting">
-	<div class="good hide">
-		<p>Please wait. Posting data to
-		<span id="serverName">Habitica</span>... <span id="statusPost"></span></p>
-	</div>
 </div>
 
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
-		<dt>2.1.1 - Lets Ride!<span class="date">2019-08-10</span></dt>
+		<dt>3.0 - Cookie Cutter - with a better feeder<span class="date">2020-08-25</span></dt>
+        <dd><ul>
+	            <li>Features:
+                <ul>
+					<li>Handling the new Habitica API Limits. </li>
+					<li>Showing version of API as well as version of tool</li>
+					<li>Adding multiple feeding options</li>
+				</ul> 
+            </li>
+		</ul></dd>
+		<dt>2.1 - Lets Ride!<span class="date">2019-08-10</span></dt>
         <dd><ul>
 	            <li>Features:
                 <ul>
@@ -3451,12 +3410,10 @@ ul#tableOfContents > li {
             </label>
 			<div id="exportOptionSelector"></div>
             <input class="div-fetchData" type="submit" value="Fetch Pet Data" />
+			<p>To ensure quick loads, only use one instance of Third Party Tool at a time.</p>
 			<div id="exportOptionDesc"></div>
             <p class="highlight">Privacy and security notes:</p>
             <ul>
-            <!--<li>If you access this page from the Data menu on the Habitica
-            website, your User ID will be automatically added to the form
-            above.</li> $$$ Maybe one day when the tool that good--->
             <li>Your API Token is a password - do not share it with anyone,
             not even the maintainer of this page if you are seeking help.</li>
             <li>When you enter your User ID and API Token here and click
