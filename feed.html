@@ -373,6 +373,7 @@ var serverUrl					= 'https://habitica.com/api/v3';
 var serverPathContent			= '/content?language=en';
 var serverPathUser				= '/user';
 var serverPathFeedPet			= '/user/feed'
+var serverPathFeedPetAmountPre	= '?amount='
 var serverPathHatchPet			= '/user/hatch'
 var serverPathSellItem			= '/user/sell'
 var serverReleaseAllPets		= '/user/release-both'
@@ -384,7 +385,7 @@ var imageStablePotion           =  'Pet_HatchingPotion_'
 var imageStablePet		        =  'Pet-'
 var imageFileSuffix				= '.png'
 
-var baseTimeoutPeriod			= 2300 // 2.3 seconds = 58 minutes completing Triad Bingo
+var baseTimeoutPeriod			= 100 // 0.1 seconds (Can be small as limiting has been added) = 10-12 minutes completing Triad Bingo
 var baseTimeoutPeriodLong		= 30000 // 30 seconds
 var clientId					= 'bc10ec41-4213-4482-bbb8-558e3c3ea8d5-BulkFeed'
 var userId						= '';
@@ -393,8 +394,8 @@ var showImage					= false;
 var exportOption 			 	= 'papaBear';
 var exportFormat			 	= 1;
 var rlCurrent					= {};  //holds the Current API Remaining details - must be a better way to do this.
-var debug						= true;
-var debugShowObject				= true;
+var debug						= false;
+var debugShowObject				= false;
 
 if (debug || debugShowObject) serverName = '*** TURN DEBUG OFF! *** - ' + serverName
 if (debug) console.log('debug 1');
@@ -628,6 +629,7 @@ function fetchData() {
     $('#loading .good').show();
     $('#loading .bad' ).hide();
 	$('#loading .error' ).hide();
+	$('#loading #statusError' ).text('');
 			
     var ajaxRunningCount = 2; // drops to 0 when all calls have succeeded
 	
@@ -686,6 +688,14 @@ function fetchData() {
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
 // All post functions are implemented serial as they are unreliable when performed in parallel.
+// Waiting on resolve of issues 
+//     https://github.com/HabitRPG/habitica/issues/12521 & 
+//     https://github.com/HabitRPG/habitica/issues/11376#issuecomment-534746769
+//
+//	When moving to parallel check out this commit for possible solution:
+//		https://github.com/cTheDragons/Habitica-Bulk-Feed/commit/d73b832ced6b79d222d048eb5cd6338acb78a298
+// 	(api.js and post function below need to be updated).
+
 
 
 
@@ -791,7 +801,7 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 	var nothatchPetList = ''
 	var eggKey = ''
 	var potionKey = ''
-	var loopCount = 0
+	var index = 0 
 	var loopList = []
 	var actionLogId = 'HatchPet'
 	var proceed = noPromptToFeed
@@ -857,45 +867,42 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 	function postNextHatchPet(){
 		$('#posting .good').show();
 		
-		var call = []
-		
-		for(var i = 0; i < loopList.length; i++) {			
-			obj = loopList[i]
-					
-			//Get Keys
-			eggKey = pets[obj[petKeyIndex]].egg 
-			potionKey = pets[obj[petKeyIndex]].potion 
+		obj = loopList[index]
 			
-			if (pets[obj[petKeyIndex]].pet == false){ //test for triad Bingo (Does not check if the pet is there)
-				if ((eggs[eggKey].total > 0) && (potions[potionKey].total > 0)) {
-					eggs[eggKey].total-- //remove one item away
-					potions[potionKey].total-- //remove one item away
-					
-					urlToPost = serverUrl + serverPathHatchPet + '/' + eggKey + '/' + potionKey
-					call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postHatchPetSuccess, fnFailure: postHatchPetFailure, statusText: 'Hatching ' + obj[petNameIndex] , item: obj})
-					
-				} else {
-					//No Eggs To hatch
-					createActionLog(actionLogId, false, 'Not enough eggs or potions to hatch ' + obj[petNameIndex] );
-					loopCount++
-				}
-			} else {
-				//no action - silently fall over
-				loopCount++		
-			}
-		} //end for loop
 		
-		if (call.length > 0) {
-			makeAjaxCall(call, userId, apiToken, rlCurrent)		
+		//Get Keys
+		eggKey = pets[obj[petKeyIndex]].egg 
+		potionKey = pets[obj[petKeyIndex]].potion 
+		
+		if (pets[obj[petKeyIndex]].pet == false){ //test for triad Bingo
+			if ((eggs[eggKey].total > 0) && (potions[potionKey].total > 0)) {
+				eggs[eggKey].total-- //remove one item away
+				potions[potionKey].total-- //remove one item away
+				
+				urlToPost = serverUrl + serverPathHatchPet + '/' + eggKey + '/' + potionKey
+				if (debugShowObject) console.log(urlToPost);
+				createActionLog(actionLogId, false, 'Hatching ' + obj[petNameIndex] );			
+				
+				var call = []
+				call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postHatchPetSuccess, fnFailure: postHatchPetFailure, statusText: 'Hatching ' + obj[petNameIndex]} )
+				makeAjaxCall(call, userId, apiToken, rlCurrent)
+				
+			} else {
+				//No Eggs To hatch
+				createActionLog(actionLogId, false, 'Not enough eggs or potions to hatch ' + obj[petNameIndex] );
+				index++
+				postHatchPetCompleted()
+			}
 		} else {
-			postHatchPetCompleted()	
+			//no action - silently fall over
+			index++
+			postHatchPetCompleted()			
 		}
-
 	}
 		
 
 	
-	function postHatchPetFailure(data, rl, obj){
+	function postHatchPetFailure(data, rl){
 		if (debug) console.log('debug postHatchPetFailure start');
 		rlCurrent = rl
 		if (debugShowObject) console.log(data);
@@ -911,39 +918,44 @@ function postHatchPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, multiS
 			if (errData.error != undefined ) errItem = errData.statusText
 		}
 		
-		createActionLog(actionLogId, true, 'Hatching ' + obj[petNameIndex] + ': ' + errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
-		alert('ERROR WITH Hatching ' + obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
-		loopCount++
+		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
+		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
+		index++
 		
 		postHatchPetCompleted()
 	}
 
 
-	function postHatchPetSuccess(data, rl, obj){
-		if (debug) console.log('debug postHatchPetSuccess start');
+	function postHatchPetSuccess(data, rl){
+		if (debug) console.log('debug postHatchPetSucess start');
 		rlCurrent = rl
-		createActionLog(actionLogId, true, 'Hatching ' + obj[petNameIndex] + ': ' + data.message);
+		createActionLog(actionLogId, true, data.message);
 		if (debugShowObject) console.log(data);
 		pets[obj[petKeyIndex]].feedValue = 1 //This is set for multistep to state the pet can be feed.
 
-		loopCount++
+		index++
 		hatchPetList += '\n\u2022  ' + obj[petNameIndex]  	
 		postHatchPetCompleted()
 		
 	}
 	
 	function postHatchPetCompleted() {
-		if (loopCount === loopList.length){
+		if (index === loopList.length){
 			$('#posting .good').hide();
 			if (debugShowObject) console.log(hatchPetList);
 			if (multiStep >= 0) {
 				multiStepArray[multiStep].result = 'The following pets have become mounts:' + hatchPetList
 				multiStepNextAction()
 			} else {	
-				alert('The following pets have been hatched:' + hatchPetList + '\n\nCheck the Action Log for more detail.\n\nYour data will now be refreshed')
+				alert('The following pets have been hatched:' + hatchPetList + '\n\nYour data will now be refreshed')
 				fetchData() 
 			}
-		} 
+		} else {
+			setTimeout(function(){
+				postNextHatchPet()
+			}, baseTimeoutPeriod)
+		}		
+	
 	}
 }
 
@@ -954,9 +966,9 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 	if (debug) console.log('debug postFeedPet start');
 	var urlToPost = ''	
 	var feedPetList = ''
-	var notFeedPetList = ''	
+	var notFeedPetList = ''
+	var index = 0
 	var foodKey 
-	var loopCount = 0
 	var loopList = []
 	var actionLogId = 'FeedPet'
 	var proceed = noPromptToFeed
@@ -1019,73 +1031,101 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 
 	}
 	
-	//This is done like this as receive ERR_INCOMPLETE_CHUNKED_ENCODING
+	
 	function postNextFeedPet(){
 		$('#posting .good').show();
 		
-		var call = []
-		
-		for(var i = 0; i < loopList.length; i++) {			
-			obj = loopList[i]
-		
-			//Find Food to use
-			foodKey = ''
-			if ((pets[obj[petKeyIndex]].feedValue > 0) ) { 
-				if (foodKeyIndex < 0) {
-					if (pets[obj[petKeyIndex]].type == 'premium') {
-						var maxFood = 0
-						$.each(potions, function(index2, obj2){
-							if (obj2.foodAvail > maxFood ) {
-								maxFood = obj2.foodAvail
-								$.each(food, function(index3, obj3){
-									if ((obj3.total > 0 ) && (obj3.target == index2)) {
+		obj = loopList[index]
+		//Find Food to use
+		foodKey = ''
+		var maxFood = 0
+		var minFood = 0
+		var feedAmount = 0
+		if ((pets[obj[petKeyIndex]].feedValue > 0) ) { 
+			if (foodKeyIndex < 0) {
+				if (pets[obj[petKeyIndex]].type == 'premium') {
+					$.each(potions, function(index2, obj2){
+						if (obj2.foodAvail > maxFood ) {
+							$.each(food, function(index3, obj3){
+								if ((obj3.total > 0 ) && (obj3.target == index2)) {
+									if (obj3.total > feedAmount) {
 										foodKey = index3
-									}						
-								});
-							}						
-						});
+										feedAmount = food[foodKey].total 
+										maxFood = obj2.foodAvail
+									}
+								}
+							});
+						} else {
+							if ((pets[obj[petKeyIndex]].potion != food[foodKey].target) && obj2.foodAvail > minFood) minFood = obj2.foodAvail								
+						}						
+					});
+					if (feedAmount - minFood <= 0) {
+						feedAmount = 1
 					} else {
-						$.each(food, function(index2, obj2){
-							if (obj2.total > 0 ) {
-								if (pets[obj[petKeyIndex]].potion == obj2.target) foodKey = index2
-							}
-							
-						});
+						feedAmount = feedAmount - minFood
 					}
 				} else {
-					if (food[obj[foodKeyIndex]] != undefined) {
-						if (food[obj[foodKeyIndex]].total > 0 ) {
-							foodKey = obj[foodKeyIndex]
+					$.each(food, function(index2, obj2){
+						if (obj2.total > 0 ) {
+							if (pets[obj[petKeyIndex]].potion == obj2.target) {
+								if (obj2.total > feedAmount) {
+									foodKey = index2
+									feedAmount = food[foodKey].total
+								}
+							}
 						}
-					}
+					});
 				}
 
-			
-				if (foodKey != '') {
-					food[foodKey].total-- //remove one item away
-					potions[food[foodKey].target].foodAvail-- //for magic potion pets
-			
-					urlToPost = serverUrl + serverPathFeedPet + '/' + obj[petKeyIndex] + '/' + foodKey
-					call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postFeedPetSuccess, fnFailure: postFeedPetFailure, statusText: 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text , item: obj})
-	
-				} else {
-					//No Food To Feed
-					createActionLog(actionLogId, false, 'Not enough food to feed ' + obj[petNameIndex] );
-					loopCount++
-				}
 			} else {
-					//No Pet To Feed
-					createActionLog(actionLogId, false, 'Cannot feed pet ' + obj[petNameIndex] + ' as it is not hatched.' );
-					loopCount++
+				if (food[obj[foodKeyIndex]] != undefined) {
+					if (food[obj[foodKeyIndex]].total > 0 ) {
+						foodKey = obj[foodKeyIndex]
+						
+						feedAmount = food[foodKey].total 
+						
+					}
+				}
+					
 			}
-		} //end for loop
+	
 		
-		if (call.length > 0) {
-			makeAjaxCall(call, userId, apiToken, rlCurrent)		
+		
+			if (foodKey != '') {
+				if ((pets[obj[petKeyIndex]].type == 'premium') || (pets[obj[petKeyIndex]].potion == food[foodKey].target)) {
+					if (Math.ceil((50-pets[obj[petKeyIndex]].feedValue*10/2)/5) < feedAmount) {
+						feedAmount = Math.ceil((50-pets[obj[petKeyIndex]].feedValue*10/2)/5)
+					}
+				} else {
+					if (Math.ceil((50-pets[obj[petKeyIndex]].feedValue*10/2)/2) < feedAmount) {
+						feedAmount = Math.ceil((50-pets[obj[petKeyIndex]].feedValue*10/2)/2)
+					}
+				}
+				if ((feedAmount <= 0) || (feedAmount == undefined)) feedAmount = 1
+				
+				food[foodKey].total = food[foodKey].total - feedAmount  //remove items away
+				potions[food[foodKey].target].foodAvail = potions[food[foodKey].target].foodAvail - feedAmount //for magic potion pets
+		
+				urlToPost = serverUrl + serverPathFeedPet + '/' + obj[petKeyIndex] + '/' + foodKey + serverPathFeedPetAmountPre + feedAmount
+				if (debugShowObject) console.log(urlToPost);
+				createActionLog(actionLogId, false, 'Feeding ' + obj[petNameIndex] + ' with ' + feedAmount + ' ' + food[foodKey].text);
+				
+				call = []
+				call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postFeedPetSuccess, fnFailure: postFeedPetFailure, statusText: 'Feeding ' + obj[petNameIndex] + ' with ' + feedAmount + ' ' + food[foodKey].text })
+				makeAjaxCall(call, userId, apiToken, rlCurrent)
+				
+			} else {
+				//No Food To Feed
+				createActionLog(actionLogId, false, 'Not enough food to feed ' + obj[petNameIndex] );
+				index++
+				postFeedPetCompleted()
+			}
 		} else {
-			postFeedPetCompleted()	
+				//No Pet To Feed
+				createActionLog(actionLogId, false, 'Cannot feed pet ' + obj[petNameIndex] + ' as it is not hatched.' );
+				index++
+				postFeedPetCompleted()
 		}
-		
 	}
 		
 
@@ -1105,9 +1145,9 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 			if (errData.error != undefined ) errItem = errData.statusText
 		}
 		
-		createActionLog(actionLogId, true, 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text +': ' + errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
+		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage)
 		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
-		loopCount++
+		index++
 		
 		postFeedPetCompleted()
 	}
@@ -1115,21 +1155,23 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 
 	function postFeedPetSuccess(data){
 		if (debug) console.log('debug postFeedPetSucess start');
-		createActionLog(actionLogId, true, 'Feeding ' + obj[petNameIndex] + ' with ' + food[foodKey].text +': ' +  data.message);
+		createActionLog(actionLogId, true, data.message);
 		if (debugShowObject) console.log(data);
 		
+		pets[obj[petKeyIndex]].feedValue = data.data * 2 / 10
 		
 		if (data.data <= 0) {
-			loopCount++
+			index++
 			pets[obj[petKeyIndex]].pet = false //Set to false so pet can be feed again for triad.
 			feedPetList += '\n\u2022  ' + obj[petNameIndex]  
-		}	
+		} 
+		
 		postFeedPetCompleted()
 		
 	}
 	
 	function postFeedPetCompleted() {
-		if (loopCount === loopList.length){
+		if (index === loopList.length){
 			$('#posting .good').hide();
 			if (debugShowObject) console.log(feedPetList);
 			if (multiStep >= 0) {
@@ -1139,7 +1181,11 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 				alert('The following pets have become mounts:' + feedPetList + '\n\nYour data will now be refreshed')
 				fetchData() 
 			}
-		} 	
+		} else {
+			setTimeout(function(){
+				postNextFeedPet()
+			}, baseTimeoutPeriod)
+		}		
 	
 	}
 }
@@ -1153,7 +1199,7 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 	if (debug) console.log('debug postSellItem start');
 	var urlToPost = ''	
 	var sellItemList = ''
-	var loopCount = 0
+	var index = 0
 	var foodKey 
 	var loopList = []
 	var sellAmount = Math.abs(sellAction)
@@ -1221,42 +1267,36 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 	function postNextSellItem(){
 		$('#posting .good').show();
 		
-		var call = []
-		
-		for(var i = 0; i < loopList.length; i++) {			
-			obj = loopList[i]
-
+		obj = loopList[index]
 				
-			if (sellAction == 0) {
-				sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total
-			} else if (sellAction > 0) {
-				sellAmountUrl = sellAmount
-			} else if (sellAction < 0) {
-				sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total - sellAmount
-			}
+		if (sellAction == 0) {
+			sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total
+		} else if (sellAction > 0) {
+			sellAmountUrl = sellAmount
+		} else if (sellAction < 0) {
+			sellAmountUrl = sellItems[obj[itemCatIndex] + '_' + obj[itemKeyIndex]].total - sellAmount
+		}
 
-			if (sellAmountUrl > 0) {
-				obj.sellAmountUrl = sellAmountUrl
-				urlToPost = serverUrl + serverPathSellItem + '/' + itemCode[obj[itemCatIndex]] + '/' + obj[itemKeyIndex] + '?amount=' + sellAmountUrl
-				call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postSellItemSuccess, fnFailure: postSellItemFailure, statusText: 'Selling ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] , item: obj})
-						
-			} else {
-				//Not enough to sell
-				createActionLog(actionLogId, false, 'Not enough to sell of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] );
-				loopCount++		
-			}
-		} //end for loop
-		
-		if (call.length > 0) {
-			makeAjaxCall(call, userId, apiToken, rlCurrent)		
+		if (sellAmountUrl > 0) {
+			urlToPost = serverUrl + serverPathSellItem + '/' + itemCode[obj[itemCatIndex]] + '/' + obj[itemKeyIndex] + '?amount=' + sellAmountUrl
+			if (debugShowObject) console.log(urlToPost);
+			createActionLog(actionLogId, false, 'Selling ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]);
+			
+			var call = []
+			call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postSellItemSuccess, fnFailure: postSellItemFailure, statusText: 'Selling ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]} )
+			makeAjaxCall(call, userId, apiToken, rlCurrent)
+	
 		} else {
-			postSellItemCompleted()	
+			//Not enough to sell
+			createActionLog(actionLogId, false, 'Not enough to sell of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] );
+			index++
+			postSellItemCompleted()			
 		}
 	}
 		
 
 	
-	function postSellItemFailure(data, rl, obj){
+	function postSellItemFailure(data, rl){
 		if (debug) console.log('debug postSellItemFailure start');
 		rlCurrent = rl
 		if (debugShowObject) console.log(data);
@@ -1272,21 +1312,21 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 			if (errData.error != undefined ) errItem = errData.statusText
 		}
 		
-		createActionLog(actionLogId, true, 'Selling ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] + ': ' + errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage);
+		createActionLog(actionLogId, true, errItem + '&nbsp&nbsp&nbsp&nbsp ' + errMessage);
 		alert('ERROR WITH  ' +  obj[petNameIndex] + '\n\n' + errItem + '\n' + errMessage + '\n\nPlease refetch your data and try again.');	
-		loopCount++
+		index++
 		
 		postSellItemCompleted()
 	}
 
 
-	function postSellItemSuccess(data, rl, obj){
+	function postSellItemSuccess(data, rl){
 		if (debug) console.log('debug postSellItemSucess start');
 		rlCurrent = rl
-		createActionLog(actionLogId, true, 'Selling ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex] + ': ' + 'Successfully sold ' + obj.sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]);
+		createActionLog(actionLogId, true, 'Successfully sold ' + sellAmountUrl + ' of ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]);
 		if (debugShowObject) console.log(data);
 		
-		loopCount++
+		index++
 		sellItemList += '\n\u2022  ' + obj[itemNameIndex] + ' ' + obj[itemCatIndex]  
 
 		postSellItemCompleted()
@@ -1294,7 +1334,7 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 	}
 	
 	function postSellItemCompleted() {
-		if (loopCount === loopList.length){
+		if (index === loopList.length){
 			$('#posting .good').hide();
 			if (debugShowObject) console.log(sellItemList);
 			if (multiStep >= 0) {
@@ -1304,11 +1344,14 @@ function postSellItem(rowData, itemKeyIndex, itemCatIndex, itemNameIndex, sellAc
 				alert('The following items have been sold:' + sellItemList + '\n\nYour data will now be refreshed')
 				fetchData() 
 			}
-		} 		
+		} else {
+			setTimeout(function(){
+				postNextSellItem()
+			}, baseTimeoutPeriod)
+		}		
 	
 	}
 }
-
 
 //////////////////////////////////////////////////////////////////////
 ////  Release Triad Bingo		   	    //////////////////////////////
@@ -1331,27 +1374,18 @@ function postReleaseTriadBingo() {
 		
 		urlToPost = serverUrl + serverReleaseAllPets
 		if (debugShowObject) console.log(urlToPost);
-		$('#posting #statusPost').text('Releasing all Standard (Gen 1) Pets & Mounts' );
-		$.ajax({
-			url: urlToPost,
-			type: 'POST',
-			contentType: 'application/json',
-			dataType: 'json',
-			cache: false,
-			beforeSend: function(xhr){
-					xhr.setRequestHeader('x-client', clientId);
-					xhr.setRequestHeader('x-api-user', userId);
-					xhr.setRequestHeader('x-api-key',  apiToken);					
-				},
-			success: postReleaseTriadBingoSuccess,
-			error: postReleaseTriadBingoFailure
-		});		
+		
+		var call = []
+		call.push({requestType: 'POST', urlTo: urlToPost, newData: '', fnSuccess: postReleaseTriadBingoSuccess, fnFailure: postReleaseTriadBingoFailure, statusText: 'Releasing all Standard (Gen 1) Pets & Mounts' } )
+		makeAjaxCall(call, userId, apiToken, rlCurrent)
+	
 	}
 		
 
 	
-	function postReleaseTriadBingoFailure(data){
+	function postReleaseTriadBingoFailure(data, rl){
 		if (debug) console.log('debug postReleaseTriadBingoFailure start');
+		rlCurrent = rl
 		if (debugShowObject) console.log(data);
 		var errData = data;
 		var errItem = ''
@@ -1373,8 +1407,9 @@ function postReleaseTriadBingo() {
 	}
 
 
-	function postReleaseTriadBingoSuccess(data){
+	function postReleaseTriadBingoSuccess(data, rl){
 		if (debug) console.log('debug postReleaseTriadBingoSuccess start');
+		rlCurrent = rl
 		if (debugShowObject) console.log(data);
 		createActionLog(actionLogId, true, data.message);
 		alert('All Standard (Gen 1) Pets & Mounts have been released.\n\nYour data will now be refreshed.')
@@ -1445,7 +1480,7 @@ function manualFeedPet(rowData, petKeyIndex, petNameIndex, foodKey) {
 		{
 			loopList[i].push(foodKey)
 			feedPetList += '\n\u2022  ' + loopList[i][petNameIndex]
-			if (pets[rowData[i][petKeyIndex]].potion != food[foodKey].target) {
+			if ((pets[rowData[i][petKeyIndex]].potion != food[foodKey].target) && (pets[rowData[i][petKeyIndex]].type != 'premium')) {
 				feedPetListIncorrectFood += '\n\u2022  ' + loopList[i][petNameIndex]
 			}
 		}		
@@ -1482,7 +1517,7 @@ function triadBingoHatchFeedPet() {
 	multiStepArray = []
 	multiStep = 0
 	
-	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?\n\nPlease note that ALL food, including special, seasonal foods such as candies or pies, will be used to feed your pets if they like the food.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Estimated over 60 minutes).'
+	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?\n\nPlease note that ALL food, including special, seasonal foods such as candies or pies, will be used to feed your pets if they like the food.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Estimated over 10 minutes).'
 	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Standard (Gen 1) pets as much as possible?\n\nPlease note that ALL food, including special, seasonal foods such as candies or pies, will be used to feed your pets if they like the food.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Can be over 20 minutes).' 
 	
 	if (confirm(confirmMsg)) {
@@ -3161,13 +3196,14 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
-		<dt>3.0 - Cookie Cutter - with a better feeder<span class="date">2020-08-25</span></dt>
+		<dt>3.0 - Cookie Cutter - with better food delivery!<span class="date">2020-09-03</span></dt>
         <dd><ul>
 	            <li>Features:
                 <ul>
 					<li>Handling the new Habitica API Limits. </li>
-					<li>Showing version of API as well as version of tool</li>
-					<li>Adding multiple feeding options</li>
+					<li>Showing version of API as well as version of tool.</li>
+					<li>Using the amount feeding option when feeding pets.</li>
+					<li>Will try to pick the most food type to feed that first.</li>
 				</ul> 
             </li>
 		</ul></dd>

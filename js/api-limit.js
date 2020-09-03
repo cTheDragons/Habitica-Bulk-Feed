@@ -19,10 +19,10 @@
 // v 1.0 - 2020-07-22 - Creation
 // v 1.1 - 2020-07-22 - Slowed down the sayings. More sayings
 // v 2.0 - 2020-08-23 - Return version to display. More sayings. Few typo corrections.
-// v 2.1 - 2020-08-30 - Adds Item Name to call. More saying as always :)
+
 
 function getApiVersion() {
-	return '2.1'
+	return '2.0'
 }
 	
 function makeAjaxCall(call, userId, apiToken, rl){
@@ -272,7 +272,7 @@ function makeAjaxCall(call, userId, apiToken, rl){
 							}
 						}
 						
-						execAjaxCall(obj.requestType, obj.urlTo, obj.newData, obj.fnSuccess, obj.fnFailure, obj.item)
+						execAjaxCall(obj.requestType, obj.urlTo, obj.newData, obj.fnSuccess, obj.fnFailure)
 						
 					}, timeoutPeriodQueue * index)
 				} else {
@@ -293,7 +293,7 @@ function makeAjaxCall(call, userId, apiToken, rl){
 		}, timeoutPeriod)
 	}
 
-	function execAjaxCall(requestType, urlTo, newData, fnSuccess, fnFailure, item){
+	function execAjaxCall(requestType, urlTo, newData, fnSuccess, fnFailure){
 		if (debug) console.log('execAjaxCall START ' + urlTo)
 		var jqxhr = $.ajax({
 			url: urlTo,
@@ -313,7 +313,7 @@ function makeAjaxCall(call, userId, apiToken, rl){
 			if (debug) console.log('Remaining ' + jqxhr.getResponseHeader('X-RateLimit-Remaining') + '  Reset: '+ jqxhr.getResponseHeader('X-RateLimit-Reset'))
 			rl.rlRemaining = jqxhr.getResponseHeader('X-RateLimit-Remaining')
 			rl.rlResetDateTime = jqxhr.getResponseHeader('X-RateLimit-Reset')
-			fnSuccess(data, rl, item)
+			fnSuccess(data, rl)
 			
 		});
 		//this section is executed when the server responds with error
@@ -326,12 +326,12 @@ function makeAjaxCall(call, userId, apiToken, rl){
 				//call again
 				$('#loading #statusWait').text('Opps I lost my place, one moment...'); 
 				setTimeout(function () {
-					execAjaxCall(requestType, urlTo, newData, fnSuccess, fnFailure, item)
+					execAjaxCall(requestType, urlTo, newData, fnSuccess, fnFailure)
 				}, timeoutPeriod);
 			} else {
 				rl.rlRemaining = jqxhr.getResponseHeader('X-RateLimit-Remaining')
 				rl.rlResetDateTime = jqxhr.getResponseHeader('X-RateLimit-Reset')
-				fnFailure(data, rl, item)
+				fnFailure(data, rl)
 			}
 			
 		})
