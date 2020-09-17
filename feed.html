@@ -1045,19 +1045,21 @@ function postFeedPet(rowData, petKeyIndex, petNameIndex, noPromptToFeed, foodKey
 			if (foodKeyIndex < 0) {
 				if (pets[obj[petKeyIndex]].type == 'premium') {
 					$.each(potions, function(index2, obj2){
-						if (obj2.foodAvail > maxFood ) {
-							$.each(food, function(index3, obj3){
-								if ((obj3.total > 0 ) && (obj3.target == index2)) {
-									if (obj3.total > feedAmount) {
-										foodKey = index3
-										feedAmount = food[foodKey].total 
-										maxFood = obj2.foodAvail
+						if (obj2.foodAvail > 0) {
+							if (obj2.foodAvail > maxFood ) {
+								$.each(food, function(index3, obj3){
+									if ((obj3.total > 0 ) && (obj3.target == index2)) {
+										if (obj3.total > feedAmount) {
+											foodKey = index3
+											feedAmount = food[foodKey].total 
+											maxFood = obj2.foodAvail
+										}
 									}
-								}
-							});
-						} else {
-							if ((pets[obj[petKeyIndex]].potion != food[foodKey].target) && obj2.foodAvail > minFood) minFood = obj2.foodAvail								
-						}						
+								});
+							} else {
+								if ((pets[obj[petKeyIndex]].potion != food[foodKey].target) && obj2.foodAvail > minFood) minFood = obj2.foodAvail								
+							}	
+						}
 					});
 					if (feedAmount - minFood <= 0) {
 						feedAmount = 1
@@ -1518,7 +1520,7 @@ function triadBingoHatchFeedPet() {
 	multiStep = 0
 	
 	var confirmMsg = 'Hatch eggs and feed pets to complete Triad Bingo?\n\nPlease note that ALL food, including special, seasonal foods such as candies or pies, will be used to feed your pets if they like the food.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Estimated over 10 minutes).'
-	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Standard (Gen 1) pets as much as possible?\n\nPlease note that ALL food, including special, seasonal foods such as candies or pies, will be used to feed your pets if they like the food.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Can be over 20 minutes).' 
+	if (canTriadBingo == false) confirmMsg = 'You do not have enough to complete Triad Bingo.\n\nHatch eggs and feed Standard (Gen 1) pets as much as possible?\n\nPlease note that ALL food, including special, seasonal foods such as candies or pies, will be used to feed your pets if they like the food.\n\nYou may want to get a drink, or do some tasks as this will take a while. (Can be over 10 minutes).' 
 	
 	if (confirm(confirmMsg)) {
 
@@ -3169,7 +3171,7 @@ ul#tableOfContents > li {
 </head>
 <body><div id="innerBody">	
 <h1><a href="https://habitica.com/">Habitica</a> Bulk Feed Pets Tool
-    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v3.0- vApi<span class="apiVersion" id="apiVersion"> NOT INSTALLED !</span>)</span></h1><!-- VERSION TOGGLE -->
+    <span class="showHideToggle" data-target="versionChanges" data-closemainsections="true">(v3.1- vApi<span class="apiVersion" id="apiVersion"> NOT INSTALLED !</span>)</span></h1><!-- VERSION TOGGLE -->
 <div id="headerExtras"></div>
 <hr class="clear" />
 
@@ -3196,6 +3198,15 @@ ul#tableOfContents > li {
 <div id="versionChanges" class="hide"><!-- VERSION SECTION -->
     <h2>Version History</h2>
     <dl>
+		<dt>3.1 - Back of the Cupboard<span class="date">2020-09-17</span></dt>
+        <dd><ul>
+	            <li>Bug Fixes:
+                <ul>
+					<li>Bulk Feed for magic pets will work when some food types are not available.</li>
+					<li>Ensure triad bingo messages state 10 minutes not 20.</li>
+				</ul> 
+            </li>
+		</ul></dd>
 		<dt>3.0 - Cookie Cutter - with better food delivery!<span class="date">2020-09-03</span></dt>
         <dd><ul>
 	            <li>Features:
